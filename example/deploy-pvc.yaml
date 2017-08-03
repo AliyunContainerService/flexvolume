@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: deployment-nginx-flexvolume-alicloud-pv
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-flexvolume-alicloud-pv
+        image: nginx
+        volumeMounts:
+            - name: pv-storage
+              mountPath: "/var/lib"
+      volumes:
+      - name: pv-storage
+        persistentVolumeClaim:
+            claimName: pv-claim
