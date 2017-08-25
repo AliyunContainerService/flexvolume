@@ -1,0 +1,22 @@
+{
+	"ImportPath": "gitlib.alibaba-inc.com/acs/flexvolume",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Packages": [
+		"../..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/denverdino/aliyungo/common",
+			"Rev": "ccf245eb04dc6f6ade9c2d15322b2a7833339ba5"
+		},
+		{
+			"ImportPath": "github.com/denverdino/aliyungo/ecs",
+			"Rev": "ccf245eb04dc6f6ade9c2d15322b2a7833339ba5"
+		},
+		{
+			"ImportPath": "github.com/denverdino/aliyungo/util",
+			"Rev": "ccf245eb04dc6f6ade9c2d15322b2a7833339ba5"
+		}
+	]
+}

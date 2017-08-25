@@ -1,0 +1,16 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pod-nginx-flexvolume-alicloud-pv
+spec:
+  volumes:
+    - name: task-pv-storage
+      persistentVolumeClaim:
+        claimName: pv-claim
+
+  containers:
+    - name: task-pv-container
+      image: nginx
+      volumeMounts:
+      - mountPath: "/var/lib"
+        name: task-pv-storage

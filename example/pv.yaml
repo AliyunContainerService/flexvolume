@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: d-bp1au6l6mbscl64apz0n
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: slow
+  flexVolume:
+    driver: "alicloud/disk"
+    fsType: "ext4"
+    options:
+      volumeId: "d-bp1au6l6mbscl64apz0n" 
