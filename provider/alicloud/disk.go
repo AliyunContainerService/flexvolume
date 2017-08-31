@@ -14,6 +14,7 @@ import (
 )
 
 const credPath string = "/etc/kubernetes/cloud-config"
+const KUBERNETES_ALICLOUD_DISK_DRIVER = "alicloud_disk"
 
 type AlicloudOptions struct {
 	FsType   string `json:"kubernetes.io/fsType"`
@@ -48,7 +49,7 @@ func (AlicloudPlugin) Attach(opts interface{}, nodeName string) f.Result {
 		return f.Fail(err.Error())
 	}
 
-	client := ecs.NewClient(defaultOpt.Global.AccessKeyID, defaultOpt.Global.AccessKeySecret)
+	client := NewSDKClient(defaultOpt.Global.AccessKeyID, defaultOpt.Global.AccessKeySecret, instanceId)
 	if client == nil {
 		return f.Fail("Could not create client")
 	}
@@ -157,7 +158,7 @@ func (AlicloudPlugin) Attach(opts interface{}, nodeName string) f.Result {
 }
 
 func (AlicloudPlugin) Detach(device string, nodeName string) f.Result {
-	regionId, _, err := getRegionIdAndInstanceId(nodeName)
+	regionId, instanceId, err := getRegionIdAndInstanceId(nodeName)
 	if err != nil {
 		return f.Fail(err.Error())
 	}
@@ -167,7 +168,7 @@ func (AlicloudPlugin) Detach(device string, nodeName string) f.Result {
 	}
 	var opt f.DefaultOptions
 	json.Unmarshal(raw, &opt)
-	client := ecs.NewClient(opt.Global.AccessKeyID, opt.Global.AccessKeySecret)
+	client := NewSDKClient(opt.Global.AccessKeyID, opt.Global.AccessKeySecret, instanceId)
 	if client == nil {
 		return f.Fail("Could not create client")
 	}
@@ -216,6 +217,12 @@ func getRegionIdAndInstanceId(nodeName string) (string, string, error) {
 		return "", "", fmt.Errorf("failed to get regionID and instanceId from nodeName")
 	}
 	return strs[0], strs[1], nil
+}
+
+func NewSDKClient(access_key_id, access_key_secret, instanceId string) *ecs.Client {
+	client := ecs.NewClient(access_key_id, access_key_secret)
+	client.SetUserAgent(KUBERNETES_ALICLOUD_DISK_DRIVER + "/" + instanceId)
+	return client
 }
 
 func main() {
