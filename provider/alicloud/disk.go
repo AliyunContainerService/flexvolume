@@ -10,7 +10,7 @@ import (
 
 	"github.com/denverdino/aliyungo/common"
 	"github.com/denverdino/aliyungo/ecs"
-	f "gitlab.alibaba-inc.com/acs/flexvolume"
+	f "github.com/AliyunContainerService/flexvolume"
 )
 
 const credPath string = "/etc/kubernetes/cloud-config"
