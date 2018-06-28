@@ -1,7 +1,6 @@
-FROM registry.aliyuncs.com/acs/alpine:3.3
-RUN apk add --update curl && rm -rf /var/cache/apk/*
-RUN apk --update add fuse curl libxml2 openssl libstdc++ libgcc && rm -rf /var/cache/apk/* 
-
+FROM alpine:3.7
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/' /etc/apk/repositories \
+    && apk --no-cache add fuse curl libxml2 openssl libstdc++ libgcc
 RUN mkdir -p /acs
 COPY nsenter /acs/nsenter
 COPY bin/flexvolume /acs/flexvolume
