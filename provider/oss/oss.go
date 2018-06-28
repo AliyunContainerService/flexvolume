@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
-	log "github.com/sirupsen/logrus"
 	"github.com/denverdino/aliyungo/ecs"
+	log "github.com/sirupsen/logrus"
 	"os"
 )
 
