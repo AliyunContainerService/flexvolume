@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "flexvolume-oss-example"
+spec:
+  containers:
+    - name: "nginx"
+      image: "nginx"
+      volumeMounts:
+          - name: pvc-oss
+            mountPath: "/data"
+  volumes:
+  - name: pvc-oss
+    persistentVolumeClaim:
+        claimName: pvc-oss

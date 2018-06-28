@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-nas-deploy
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-flexvolume-nas
+        image: nginx
+        volumeMounts:
+          - name: "nas1"
+            mountPath: "/data"
+      volumes:
+        - name: "nas1"
+          flexVolume:
+            driver: "alicloud/nas"
+            options:
+              server: "0cd8b4a576-uih75.cn-hangzhou.nas.aliyuncs.com"
+              path: "/k8s1"
+              vers: "4.0"
+              mode: "755"

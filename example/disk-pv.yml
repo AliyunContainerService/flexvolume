@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: d-bp1j17ifxfasvts3tf40
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  flexVolume:
+    driver: "alicloud/disk"
+    fsType: "ext4"
+    options:
+      volumeId: "d-bp1j17ifxfasvts3tf40" 

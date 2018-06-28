@@ -1,0 +1,27 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-oss-deploy
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-flexvolume-oss
+        image: nginx
+        volumeMounts:
+          - name: "oss1"
+            mountPath: "/data"
+      volumes:
+        - name: "oss1"
+          flexVolume:
+            driver: "alicloud/oss"
+            options:
+              bucket: "sigma-python"
+              url: "oss-cn-hangzhou.aliyuncs.com"
+              otherOpts: "-o max_stat_cache_size=0 -o allow_other"
+              akId: ""
+              akSecret: ""
