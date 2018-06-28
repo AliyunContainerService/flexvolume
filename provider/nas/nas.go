@@ -3,14 +3,14 @@ package nas
 import (
 	"fmt"
 	"net"
-	"time"
 	"path"
-	"sync"
 	"strings"
+	"sync"
+	"time"
 
-	"github.com/denverdino/aliyungo/nas"
-	log "github.com/Sirupsen/logrus"
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	log "github.com/sirupsen/logrus"
+	"github.com/denverdino/aliyungo/nas"
 	"os"
 )
 
@@ -24,7 +24,7 @@ type NasOptions struct {
 
 const (
 	NAS_PORTNUM      = "2049"
-	NAS_TEMP_MNTPath = "/mnt/acs_mnt/k8s_nas/temp"  // used for create sub directory;
+	NAS_TEMP_MNTPath = "/mnt/acs_mnt/k8s_nas/temp" // used for create sub directory;
 	MODE_CHAR        = "01234567"
 )
 
@@ -46,7 +46,7 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	log.Infof("Nas Plugin Mount: %s", strings.Join(os.Args, ","))
 
 	opt := opts.(*NasOptions)
-	if ! p.checkOptions(opt) {
+	if !p.checkOptions(opt) {
 		utils.FinishError("Nas, Options is illegal")
 	}
 
@@ -73,7 +73,7 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 		if _, err := utils.Run(mntCmd); err != nil {
 			utils.FinishError("Nas, Mount Nfs sub directory fail: " + err.Error())
 		}
-	// mount error
+		// mount error
 	} else if err != nil {
 		utils.FinishError("Nas, Mount nfs fail: " + err.Error())
 	}
@@ -84,13 +84,13 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 		wg1.Add(1)
 
 		go func(*sync.WaitGroup) {
-		    cmd := fmt.Sprintf("chmod -R %s %s", opt.Mode, mountPath)
-		    if _, err := utils.Run(cmd); err != nil {
-			    log.Errorf("Nas chmod cmd fail: %s %s", cmd, err)
-		    } else {
-		    	log.Infof("Nas chmod cmd success: %s", cmd)
-		    }
-		    wg1.Done()
+			cmd := fmt.Sprintf("chmod -R %s %s", opt.Mode, mountPath)
+			if _, err := utils.Run(cmd); err != nil {
+				log.Errorf("Nas chmod cmd fail: %s %s", cmd, err)
+			} else {
+				log.Infof("Nas chmod cmd success: %s", cmd)
+			}
+			wg1.Done()
 		}(&wg1)
 
 		if waitTimeout(&wg1, 1) {
@@ -107,7 +107,7 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	//}
 
 	// check mount
-	if ! utils.IsMounted(mountPath) {
+	if !utils.IsMounted(mountPath) {
 		utils.FinishError("Check mount fail after mount:" + mountPath)
 	}
 	log.Info("Mount success on: " + mountPath)
@@ -117,7 +117,7 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 func (p *NasPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Nas Plugin Umount: %s", strings.Join(os.Args, ","))
 
-	if ! utils.IsMounted(mountPoint) {
+	if !utils.IsMounted(mountPoint) {
 		return utils.Succeed()
 	}
 
@@ -129,7 +129,6 @@ func (p *NasPlugin) Unmount(mountPoint string) utils.Result {
 	log.Info("Umount nfs Successful: %s", mountPoint)
 	return utils.Succeed()
 }
-
 
 func (p *NasPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	return utils.NotSupport()
@@ -153,7 +152,6 @@ func (p *NasPlugin) Waitforattach(opts interface{}) utils.Result {
 func (p *NasPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
-
 
 // 1. mount to /mnt/acs_mnt/k8s_nas/tmp first
 // 2. run mkdir for sub directory
@@ -201,7 +199,7 @@ func (p *NasPlugin) checkOptions(opt *NasOptions) bool {
 	if opt.Path == "" {
 		opt.Path = "/"
 	}
-	if ! strings.HasPrefix(opt.Path, "/") {
+	if !strings.HasPrefix(opt.Path, "/") {
 		log.Errorf("NAS: Path should be empty or start with /, %s", opt.Path)
 		return false
 	}
@@ -217,15 +215,14 @@ func (p *NasPlugin) checkOptions(opt *NasOptions) bool {
 		if modeLen != 3 {
 			return false
 		}
-		for i:=0; i< modeLen; i++ {
-			if ! strings.Contains(MODE_CHAR, opt.Mode[i:i+1]) {
+		for i := 0; i < modeLen; i++ {
+			if !strings.Contains(MODE_CHAR, opt.Mode[i:i+1]) {
 				return false
 			}
 		}
 	}
 	return true
 }
-
 
 func waitTimeout(wg *sync.WaitGroup, timeout int) bool {
 	c := make(chan struct{})

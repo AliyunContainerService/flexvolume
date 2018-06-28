@@ -1,23 +1,22 @@
 package driver
 
 import (
-	"os"
-	"time"
-	"strings"
-	"path/filepath"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
-	log "github.com/Sirupsen/logrus"
+	disk "github.com/AliyunContainerService/flexvolume/provider/disk"
 	nas "github.com/AliyunContainerService/flexvolume/provider/nas"
 	oss "github.com/AliyunContainerService/flexvolume/provider/oss"
-	disk "github.com/AliyunContainerService/flexvolume/provider/disk"
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	log "github.com/sirupsen/logrus"
 )
-
 
 // VolumePlugin interface for plugins
 type FluxVolumePlugin interface {
-	NewOptions() interface{}     // not called by kubelet
+	NewOptions() interface{} // not called by kubelet
 	Init() utils.Result
 	Getvolumename(opt interface{}) utils.Result
 	Attach(opt interface{}, nodeName string) utils.Result
@@ -29,7 +28,7 @@ type FluxVolumePlugin interface {
 }
 
 const (
-	MB_SIZE           = 1024 * 1024
+	MB_SIZE = 1024 * 1024
 
 	TYPE_PLUGIN_DISK  = "disk"
 	TYPE_PLUGIN_NAS   = "nas"
@@ -39,7 +38,7 @@ const (
 )
 
 // run kubernetes command
-func RunK8sAction () {
+func RunK8sAction() {
 	if len(os.Args) < 2 {
 		utils.Finish(utils.Fail("Expected at least one parameter"))
 	}
@@ -61,7 +60,6 @@ func RunK8sAction () {
 	}
 }
 
-
 // Runplugin only support attach, detach now
 func RunPlugin(plugin FluxVolumePlugin) {
 
@@ -72,12 +70,12 @@ func RunPlugin(plugin FluxVolumePlugin) {
 
 	case "attach":
 		if len(os.Args) != 4 {
-			utils.FinishError("Attach expected exactly 4 arguments; got: " +  strings.Join(os.Args, ","))
+			utils.FinishError("Attach expected exactly 4 arguments; got: " + strings.Join(os.Args, ","))
 		}
 
 		opt := plugin.NewOptions()
 		if err := json.Unmarshal([]byte(os.Args[2]), opt); err != nil {
-			utils.FinishError("Attach Options format illegal, except json but got: " +   os.Args[2])
+			utils.FinishError("Attach Options format illegal, except json but got: " + os.Args[2])
 		}
 
 		nodeName := os.Args[3]
@@ -85,7 +83,7 @@ func RunPlugin(plugin FluxVolumePlugin) {
 
 	case "detach":
 		if len(os.Args) != 4 {
-			utils.FinishError("Detach expect 4 args; got: " +  strings.Join(os.Args, ","))
+			utils.FinishError("Detach expect 4 args; got: " + strings.Join(os.Args, ","))
 		}
 
 		volumeName := os.Args[2]
@@ -93,12 +91,12 @@ func RunPlugin(plugin FluxVolumePlugin) {
 
 	case "mount":
 		if len(os.Args) != 4 {
-			utils.FinishError("Mount expected exactly 4 arguments; got: " +  strings.Join(os.Args, ","))
+			utils.FinishError("Mount expected exactly 4 arguments; got: " + strings.Join(os.Args, ","))
 		}
 
 		opt := plugin.NewOptions()
 		if err := json.Unmarshal([]byte(os.Args[3]), opt); err != nil {
-			utils.FinishError("Mount Options illegal; got: " +   os.Args[3])
+			utils.FinishError("Mount Options illegal; got: " + os.Args[3])
 		}
 
 		mountPath := os.Args[2]
@@ -106,7 +104,7 @@ func RunPlugin(plugin FluxVolumePlugin) {
 
 	case "unmount":
 		if len(os.Args) != 3 {
-			utils.FinishError("Umount expected exactly 3 arguments; got: " +  strings.Join(os.Args, ","))
+			utils.FinishError("Umount expected exactly 3 arguments; got: " + strings.Join(os.Args, ","))
 		}
 
 		mountPath := os.Args[2]
@@ -122,7 +120,7 @@ func RunPlugin(plugin FluxVolumePlugin) {
 func setLogAttribute() {
 	driver := filepath.Base(os.Args[0])
 	logFile := LOGFILE_PREFIX + driver + ".log"
-	f, err := os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		utils.Finish(utils.Fail("Log File open error"))
 	}
@@ -131,9 +129,9 @@ func setLogAttribute() {
 	if fi, err := f.Stat(); err == nil && fi.Size() > 2*MB_SIZE {
 		f.Close()
 		timeStr := time.Now().Format("-2006-01-02-15:04:05")
-		timedLogfile :=  LOGFILE_PREFIX + driver + timeStr +".log"
+		timedLogfile := LOGFILE_PREFIX + driver + timeStr + ".log"
 		os.Rename(logFile, timedLogfile)
-		f, err = os.OpenFile(logFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+		f, err = os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			utils.Finish(utils.Fail("Log File open error2"))
 		}

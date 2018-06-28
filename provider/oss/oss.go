@@ -2,19 +2,19 @@ package oss
 
 import (
 	"fmt"
-	"strings"
 	"io/ioutil"
+	"strings"
 
-	"github.com/denverdino/aliyungo/ecs"
-	log "github.com/Sirupsen/logrus"
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	log "github.com/sirupsen/logrus"
+	"github.com/denverdino/aliyungo/ecs"
 	"os"
 )
 
 type OssOptions struct {
 	Bucket     string `json:"bucket"`
 	Url        string `json:"url"`
-    OtherOpts  string `json:"otherOpts"`
+	OtherOpts  string `json:"otherOpts"`
 	AkId       string `json:"akId"`
 	AkSecret   string `json:"akSecret"`
 	VolumeName string `json:"volumeName"`
@@ -41,7 +41,7 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	log.Infof("Oss Plugin Mount: ", strings.Join(os.Args, ","))
 
 	opt := opts.(*OssOptions)
-	if ! p.checkOptions(opt) {
+	if !p.checkOptions(opt) {
 		utils.FinishError("OSS Options is illegal ")
 	}
 
@@ -73,7 +73,7 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Oss Plugin Umount: ", strings.Join(os.Args, ","))
 
-	if ! utils.IsMounted(mountPoint) {
+	if !utils.IsMounted(mountPoint) {
 		return utils.Succeed()
 	}
 
@@ -109,7 +109,6 @@ func (p *OssPlugin) Waitforattach(opts interface{}) utils.Result {
 func (p *OssPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
-
 
 // save ak file: bucket:ak_id:ak_secret
 func (p *OssPlugin) saveCredential(options *OssOptions) error {
@@ -153,8 +152,8 @@ func (p *OssPlugin) checkOptions(opt *OssOptions) bool {
 	}
 
 	if opt.OtherOpts != "" {
-	    if ! strings.HasPrefix(opt.OtherOpts, "-o ") {
-	    	return false
+		if !strings.HasPrefix(opt.OtherOpts, "-o ") {
+			return false
 		}
 	}
 	return true
