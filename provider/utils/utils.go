@@ -1,16 +1,16 @@
 package utils
 
 import (
-	"fmt"
-	"os"
-	"reflect"
-	"strings"
-	"os/exec"
-	"io/ioutil"
 	b64 "encoding/base64"
 	"encoding/json"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/metadata"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"reflect"
+	"strings"
 )
 
 // used for global ak
@@ -24,10 +24,10 @@ type DefaultOptions struct {
 }
 
 const (
-	encodedCredPath                 = "/etc/kubernetes/cloud-config.alicloud"
-	credPath                        = "/etc/kubernetes/cloud-config"
-	USER_AKID                       = "/etc/.volumeak/akId"
-    USER_AKSECRET                   = "/etc/.volumeak/akSecret"
+	encodedCredPath = "/etc/kubernetes/cloud-config.alicloud"
+	credPath        = "/etc/kubernetes/cloud-config"
+	USER_AKID       = "/etc/.volumeak/akId"
+	USER_AKSECRET   = "/etc/.volumeak/akSecret"
 )
 
 func Succeed(a ...interface{}) Result {
@@ -103,7 +103,7 @@ func CreateDest(dest string) error {
 	return nil
 }
 
-func IsMounted (mountPath string) bool {
+func IsMounted(mountPath string) bool {
 	cmd := fmt.Sprintf("mount | grep \"%s type\" | grep -v grep", mountPath)
 	out, err := Run(cmd)
 	if err != nil || out == "" {
@@ -112,7 +112,7 @@ func IsMounted (mountPath string) bool {
 	return true
 }
 
-func Umount (mountPath string) bool {
+func Umount(mountPath string) bool {
 	cmd := fmt.Sprintf("umount -f %s", mountPath)
 	_, err := Run(cmd)
 	if err != nil {
@@ -144,10 +144,10 @@ func GetRegionIdAndInstanceId(nodeName string) (string, string, error) {
 // save json data to file
 func WriteJosnFile(obj interface{}, file string) error {
 	maps := make(map[string]interface{})
-    t := reflect.TypeOf(obj)
+	t := reflect.TypeOf(obj)
 	v := reflect.ValueOf(obj)
-    for i := 0; i < v.NumField(); i++ {
-    	if v.Field(i).String() != "" {
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).String() != "" {
 			maps[t.Field(i).Name] = v.Field(i).String()
 		}
 	}
@@ -162,23 +162,22 @@ func WriteJosnFile(obj interface{}, file string) error {
 func ReadJsonFile(file string) (map[string]string, error) {
 	jsonObj := map[string]string{}
 	raw, err := ioutil.ReadFile(file)
-    if err != nil {
-        return nil, err
-    }
-    err = json.Unmarshal(raw, &jsonObj)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(raw, &jsonObj)
 	if err != nil {
 		return nil, err
 	}
 	return jsonObj, nil
 }
 
-
 // read ossfs ak from local or from secret file
 func GetLocalAK() (string, string) {
 	accessKeyID, accessSecret := "", ""
 	//accessKeyID, accessSecret = GetLocalAK()
 	//if accessKeyID == "" || accessSecret == "" {
-	if IsFileExisting(USER_AKID) && IsFileExisting(USER_AKSECRET){
+	if IsFileExisting(USER_AKID) && IsFileExisting(USER_AKSECRET) {
 		raw, err := ioutil.ReadFile(USER_AKID)
 		if err != nil {
 			log.Error("Read User AK ID file error:", err.Error())
@@ -234,7 +233,7 @@ func GetLocalSystemAK() (string, string) {
 	var accessKeyID, accessSecret string
 	var defaultOpt DefaultOptions
 
-	if IsFileExisting(encodedCredPath){
+	if IsFileExisting(encodedCredPath) {
 		raw, err := ioutil.ReadFile(encodedCredPath)
 		if err != nil {
 			FinishError("Read cred file failed: " + err.Error())

@@ -1,13 +1,12 @@
 package main
 
 import (
-	"os"
 	"fmt"
-	"strings"
 	driver "github.com/AliyunContainerService/flexvolume/provider/driver"
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	"os"
+	"strings"
 )
-
 
 // Expect to support K8s and Swarm platform
 // Under K8s, plugin will run in cli mode, process running and exit after the actions.

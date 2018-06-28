@@ -1,34 +1,33 @@
 package disk
 
 import (
-	"os"
-	"fmt"
-	"path"
-	"time"
 	"errors"
-	"strings"
+	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
+	"strings"
+	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/denverdino/aliyungo/ecs"
-	"github.com/denverdino/aliyungo/common"
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	log "github.com/Sirupsen/logrus"
+	"github.com/denverdino/aliyungo/common"
+	"github.com/denverdino/aliyungo/ecs"
 )
-
 
 const (
 	KUBERNETES_ALICLOUD_DISK_DRIVER = "alicloud_disk"
 	VolumeDir                       = "/etc/kubernetes/volumes/disk/"
 	VolumeDirRemove                 = "/etc/kubernetes/volumes/disk/remove"
 	DISK_AKID                       = "/etc/.volumeak/diskAkId"
-    DISK_AKSECRET                   = "/etc/.volumeak/diskAkSecret"
-    DISK_ECSENPOINT                 = "/etc/.volumeak/diskEcsEndpoint"
+	DISK_AKSECRET                   = "/etc/.volumeak/diskAkSecret"
+	DISK_ECSENPOINT                 = "/etc/.volumeak/diskEcsEndpoint"
 )
 
 type DiskOptions struct {
-	VolumeName  string `json:"kubernetes.io/pvOrVolumeName"`
-	FsType      string `json:"kubernetes.io/fsType"`
-	VolumeId    string `json:"volumeId"`
+	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
+	FsType     string `json:"kubernetes.io/fsType"`
+	VolumeId   string `json:"volumeId"`
 }
 
 var KUBERNETES_ALICLOUD_IDENTITY = fmt.Sprintf("Kubernetes.Alicloud/Flexvolume.Disk-%s", utils.PluginVersion())
@@ -60,7 +59,7 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	if out, err := utils.Run(cmd); err == nil {
 		devicePath := strings.Split(strings.TrimSpace(out), " ")[0]
 		log.Infof("Disk Already Attached, DiskId: %s, Device: %s", opt.VolumeName, devicePath)
-		return utils.Result{ Status: "Success", Device: devicePath }
+		return utils.Result{Status: "Success", Device: devicePath}
 	}
 
 	// Step 1: init ecs client and parameters
@@ -104,15 +103,14 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 		time.Sleep(1000 * time.Millisecond)
 		disks, _, err := p.client.DescribeDisks(describeDisksRequest)
 		if err != nil {
-			utils.FinishError("Could not get Disk again " +  opt.VolumeId + ", with error: " + err.Error())
+			utils.FinishError("Could not get Disk again " + opt.VolumeId + ", with error: " + err.Error())
 		}
 		if len(disks) >= 1 && disks[0].Status == ecs.DiskStatusAvailable {
 			break
 		}
-		lastErr = errors.New(fmt.Sprintf("%+v\n",disks))
+		lastErr = errors.New(fmt.Sprintf("%+v\n", disks))
 	}
 	log.Infof("Disk is ready to attach: %s", opt.VolumeName, opt.VolumeId, opt.FsType)
-
 
 	// Step 4: Attach Disk, list device before attach disk
 	var before []string
@@ -141,7 +139,7 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 		if len(disks) >= 1 && disks[0].Status == ecs.DiskStatusInUse {
 			break
 		}
-		lastErr = errors.New(fmt.Sprintf("%+v\n",disks))
+		lastErr = errors.New(fmt.Sprintf("%+v\n", disks))
 	}
 
 	// Step 6: Analysis attach device, list device after attach device
@@ -153,12 +151,12 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 		}
 	}
 	devicePaths := getDevicePath(before, after)
-	if len(devicePaths) == 2 && strings.HasPrefix(devicePaths[1],devicePaths[0]) {
+	if len(devicePaths) == 2 && strings.HasPrefix(devicePaths[1], devicePaths[0]) {
 		devicePath = devicePaths[1]
-	}else if len(devicePaths) == 1 {
+	} else if len(devicePaths) == 1 {
 		devicePath = devicePaths[0]
-	}else{
-		utils.FinishError("Attach Success, but get DevicePath error, DiskId: "  + opt.VolumeId + ", Volume: " + opt.VolumeName)
+	} else {
+		utils.FinishError("Attach Success, but get DevicePath error, DiskId: " + opt.VolumeId + ", Volume: " + opt.VolumeName)
 	}
 
 	// save volume config to file
@@ -215,7 +213,6 @@ func (p *DiskPlugin) Detach(volumeName string, nodeName string) utils.Result {
 	return utils.Succeed()
 }
 
-
 // Not Support
 func (p *DiskPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	return utils.NotSupport()
@@ -259,10 +256,10 @@ func (p *DiskPlugin) initEcsClient() {
 }
 
 // read disk config from local file
-func (p *DiskPlugin)GetDiskLocalConfig() (string, string, string) {
+func (p *DiskPlugin) GetDiskLocalConfig() (string, string, string) {
 	accessKeyID, accessSecret, ecsEndpoint := "", "", ""
 
-	if utils.IsFileExisting(DISK_AKID) && utils.IsFileExisting(DISK_AKSECRET) && utils.IsFileExisting(DISK_ECSENPOINT){
+	if utils.IsFileExisting(DISK_AKID) && utils.IsFileExisting(DISK_AKSECRET) && utils.IsFileExisting(DISK_ECSENPOINT) {
 		raw, err := ioutil.ReadFile(DISK_AKID)
 		if err != nil {
 			log.Error("Read disk AK ID file error:", err.Error())
@@ -308,17 +305,17 @@ func newEcsClient(access_key_id, access_key_secret, access_token, ecs_endpoint s
 	if access_token != "" {
 		client.SetSecurityToken(access_token)
 		client.SetRegionID(DEFAULT_REGION)
-    }
-    if ecs_endpoint != "" {
-    	client.SetEndpoint(ecs_endpoint)
+	}
+	if ecs_endpoint != "" {
+		client.SetEndpoint(ecs_endpoint)
 	}
 
-    client.SetUserAgent(KUBERNETES_ALICLOUD_IDENTITY)
+	client.SetUserAgent(KUBERNETES_ALICLOUD_IDENTITY)
 	return client
 }
 
 // save diskID and volume name
-func saveVolumeConfig (opt *DiskOptions) error {
+func saveVolumeConfig(opt *DiskOptions) error {
 	if err := utils.CreateDest(VolumeDir); err != nil {
 		return err
 	}
@@ -329,7 +326,7 @@ func saveVolumeConfig (opt *DiskOptions) error {
 		return err
 	}
 
-	volumeFile := path.Join(VolumeDir, opt.VolumeName + ".json")
+	volumeFile := path.Join(VolumeDir, opt.VolumeName+".json")
 	if err := utils.WriteJosnFile(*opt, volumeFile); err != nil {
 		return err
 	}
@@ -338,10 +335,10 @@ func saveVolumeConfig (opt *DiskOptions) error {
 
 // move config file to remove dir
 func removeVolumeConfig(volumeName string) error {
-	volumeFile := path.Join(VolumeDir, volumeName + ".json")
+	volumeFile := path.Join(VolumeDir, volumeName+".json")
 	if utils.IsFileExisting(volumeFile) {
 		timeStr := time.Now().Format("-2006-01-02-15:04:05")
-		removeFile := path.Join(VolumeDirRemove, volumeName + "-" + timeStr + ".json")
+		removeFile := path.Join(VolumeDirRemove, volumeName+"-"+timeStr+".json")
 		if err := os.Rename(volumeFile, removeFile); err != nil {
 			return err
 		}
