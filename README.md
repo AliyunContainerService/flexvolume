@@ -1,5 +1,7 @@
 # 阿里云容器服务 K8S Flexvolume 插件
 
+[![Build Status](https://travis-ci.org/AliyunContainerService/flexvolume.svg?branch=master)](https://travis-ci.org/AliyunContainerService/flexvolume) [![CircleCI](https://circleci.com/gh/AliyunContainerService/flexvolume.svg?style=svg)](https://circleci.com/gh/AliyunContainerService/flexvolume) [![Go Report Card](https://goreportcard.com/badge/github.com/AliyunContainerService/flexvolume)](https://goreportcard.com/report/github.com/AliyunContainerService/flexvolume)
+
 针对阿里云云盘、NAS、OSS存储开发的flexvolume 插件，可以支持kubernetes pod 自动绑定阿里云存储服务。
 
 此版本支持Flexvolume, 静态pv. 对于动态pv尚不支持.
@@ -16,6 +18,7 @@
 > 1. 使用oss数据卷服务时必须配置Secret，如果只使用nas、云盘，则可以不配置Secret；
 > 2. 使用flexvolume需要kubelet关闭`--enable-controller-attach-detach`选项。默认阿里云K8S集群已经关闭此选项；
 > 3. 在kube-system用户空间部署flexvolume；
+
 
 ```
 apiVersion: apps/v1 # for versions before 1.8.0 use extensions/v1beta1

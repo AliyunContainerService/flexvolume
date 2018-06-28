@@ -1,0 +1,12 @@
+language: go
+
+go:
+  - 1.9.7
+
+# let us have speedy Docker-based Travis workers
+sudo: false
+
+script:
+  - go vet ./...
+  - go build
+  - go test ./...
