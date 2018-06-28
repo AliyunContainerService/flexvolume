@@ -13,3 +13,5 @@ spec:
       bucket: "sigma-python"
       url: "oss-cn-hangzhou.aliyuncs.com"
       otherOpts: "-o max_stat_cache_size=0 -o allow_other"
+      akId: ""
+      akSecret: ""

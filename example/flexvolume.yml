@@ -22,7 +22,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: acs-flexvolume
-        image: registry.cn-hangzhou.aliyuncs.com/acs/flexvolume:v1.9.7-b6dd7be
+        image: registry.cn-hangzhou.aliyuncs.com/acs/flexvolume:***
         imagePullPolicy: Always
         securityContext:
           privileged: true
@@ -33,6 +33,14 @@ spec:
           value: "true"
         - name: ACS_OSS
           value: "true"
+        - name: ACCESS_KEY_ID
+          value: ""
+        - name: ACCESS_KEY_SECRET
+          value: ""
+        - name: SLB_ENDPOINT
+          value: ""
+        - name: ECS_ENDPOINT
+          value: ""
         resources:
           limits:
             memory: 200Mi

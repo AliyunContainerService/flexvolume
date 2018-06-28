@@ -42,7 +42,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: acs-flexvolume
-        image: registry.cn-hangzhou.aliyuncs.com/acs/flexvolume:1.0.0
+        image: registry.cn-hangzhou.aliyuncs.com/acs/flexvolume:**
         imagePullPolicy: Always
         securityContext:
           privileged: true
