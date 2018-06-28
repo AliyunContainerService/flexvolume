@@ -13,5 +13,3 @@ else
 	CGO_ENABLED=0 go build -o flexvolume-linux 
 fi
 
-mkdir -p package/bin
-mv flexvolume-linux package/bin/flexvolume
