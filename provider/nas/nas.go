@@ -10,7 +10,7 @@ import (
 
 	"github.com/denverdino/aliyungo/nas"
 	log "github.com/Sirupsen/logrus"
-	utils "gitlab.alibaba-inc.com/acs/flexvolume/provider/utils"
+	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 	"os"
 )
 

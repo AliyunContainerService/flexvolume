@@ -17,8 +17,8 @@
 > 2. 使用flexvolume需要kubelet关闭`--enable-controller-attach-detach`选项。默认阿里云K8S集群已经关闭此选项；
 > 3. 在kube-system用户空间部署flexvolume；
 
----
-apiVersion: apps/v1beta2 # for versions before 1.8.0 use extensions/v1beta1
+```
+apiVersion: apps/v1 # for versions before 1.8.0 use extensions/v1beta1
 kind: DaemonSet
 metadata:
   name: flexvolume
@@ -42,7 +42,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: acs-flexvolume
-        image: registry.cn-hangzhou.aliyuncs.com/acs/flexvolume:**
+        image: flexvolume:***
         imagePullPolicy: Always
         securityContext:
           privileged: true
@@ -53,6 +53,14 @@ spec:
           value: "true"
         - name: ACS_OSS
           value: "true"
+        - name: ACCESS_KEY_ID
+          value: ""
+        - name: ACCESS_KEY_SECRET
+          value: ""
+        - name: SLB_ENDPOINT
+          value: ""
+        - name: ECS_ENDPOINT
+          value: ""
         resources:
           limits:
             memory: 200Mi
@@ -66,9 +74,6 @@ spec:
           mountPath: /host/etc/
         - name: logdir
           mountPath: /var/log/alicloud/
-        - name: secrets
-          mountPath: "/etc/.volumeak"
-          readOnly: true
       volumes:
       - name: usrdir
         hostPath:
@@ -79,9 +84,6 @@ spec:
       - name: logdir
         hostPath:
           path: /var/log/alicloud/
-      - name: secrets
-        secret:
-          secretName: flexvolumesecret
 ```
 
 ## 注意事项

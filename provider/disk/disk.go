@@ -12,7 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/ecs"
 	"github.com/denverdino/aliyungo/common"
-	utils "gitlab.alibaba-inc.com/acs/flexvolume/provider/utils"
+	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
 

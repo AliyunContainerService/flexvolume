@@ -4,8 +4,8 @@ import (
 	"os"
 	"fmt"
 	"strings"
-	driver "gitlab.alibaba-inc.com/acs/flexvolume/provider/driver"
-	utils "gitlab.alibaba-inc.com/acs/flexvolume/provider/utils"
+	driver "github.com/AliyunContainerService/flexvolume/provider/driver"
+	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
 

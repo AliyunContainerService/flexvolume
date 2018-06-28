@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 
 	log "github.com/Sirupsen/logrus"
-	nas "gitlab.alibaba-inc.com/acs/flexvolume/provider/nas"
-	oss "gitlab.alibaba-inc.com/acs/flexvolume/provider/oss"
-	disk "gitlab.alibaba-inc.com/acs/flexvolume/provider/disk"
-	utils "gitlab.alibaba-inc.com/acs/flexvolume/provider/utils"
+	nas "github.com/AliyunContainerService/flexvolume/provider/nas"
+	oss "github.com/AliyunContainerService/flexvolume/provider/oss"
+	disk "github.com/AliyunContainerService/flexvolume/provider/disk"
+	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
 
