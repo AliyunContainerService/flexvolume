@@ -249,6 +249,8 @@ spec:
               bucket: "docker"
               url: "oss-cn-hangzhou.aliyuncs.com"
               otherOpts: "-o max_stat_cache_size=0 -o allow_other"
+              akId: "***"
+              akSecret: "***"
 ```
 
 ## 使用 PV/PVC（目前不支持动态pv）
@@ -272,6 +274,8 @@ spec:
       bucket: "docker"
       url: "oss-cn-hangzhou.aliyuncs.com"
       otherOpts: "-o max_stat_cache_size=0 -o allow_other"
+      akId: "***"
+      akSecret: "***"
 ```
 
 - Create PVC with spec `oss-pvc.yaml`
