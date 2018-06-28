@@ -1,0 +1,58 @@
+apiVersion: apps/v1 # for versions before 1.8.0 use extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: flexvolume
+  namespace: kube-system
+  labels:
+    k8s-volume: flexvolume
+spec:
+  selector:
+    matchLabels:
+      name: acs-flexvolume
+  template:
+    metadata:
+      labels:
+        name: acs-flexvolume
+    spec:
+      hostPID: true
+      hostNetwork: true
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: acs-flexvolume
+        image: registry.cn-hangzhou.aliyuncs.com/acs/flexvolume:v1.9.7-b6dd7be
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        env:
+        - name: ACS_DISK
+          value: "true"
+        - name: ACS_NAS
+          value: "true"
+        - name: ACS_OSS
+          value: "true"
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: usrdir
+          mountPath: /host/usr/
+        - name: etcdir
+          mountPath: /host/etc/
+        - name: logdir
+          mountPath: /var/log/alicloud/
+      volumes:
+      - name: usrdir
+        hostPath:
+          path: /usr/
+      - name: etcdir
+        hostPath:
+          path: /etc/
+      - name: logdir
+        hostPath:
+          path: /var/log/alicloud/

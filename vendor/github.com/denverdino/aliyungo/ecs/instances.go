@@ -224,6 +224,7 @@ type SpotStrategyType string
 const (
 	NoSpot             = SpotStrategyType("NoSpot")
 	SpotWithPriceLimit = SpotStrategyType("SpotWithPriceLimit")
+	SpotAsPriceGo      = SpotStrategyType("SpotAsPriceGo")
 )
 
 //
@@ -262,8 +263,9 @@ type InstanceAttributesType struct {
 	Tags                    struct {
 		Tag []TagItemType
 	}
-	SpotStrategy SpotStrategyType
-	KeyPairName  string
+	SpotStrategy   SpotStrategyType
+	SpotPriceLimit float64
+	KeyPairName    string
 }
 
 type DescribeInstanceAttributeResponse struct {
@@ -438,6 +440,28 @@ func (client *Client) DescribeInstancesWithRaw(args *DescribeInstancesArgs) (res
 	return response, nil
 }
 
+type ModifyInstanceAutoReleaseTimeArgs struct {
+	InstanceId      string
+	AutoReleaseTime string
+}
+
+type ModifyInstanceAutoReleaseTimeResponse struct {
+	common.Response
+}
+
+// 对给定的实例设定自动释放时间。
+//
+// You can read doc at https://help.aliyun.com/document_detail/47576.html
+func (client *Client) ModifyInstanceAutoReleaseTime(instanceId, time string) error {
+	args := ModifyInstanceAutoReleaseTimeArgs{
+		InstanceId:      instanceId,
+		AutoReleaseTime: time,
+	}
+	response := ModifyInstanceAutoReleaseTimeResponse{}
+	err := client.Invoke("ModifyInstanceAutoReleaseTime", &args, &response)
+	return err
+}
+
 type DeleteInstanceArgs struct {
 	InstanceId string
 }
@@ -535,7 +559,9 @@ type CreateInstanceArgs struct {
 	AutoRenew               bool
 	AutoRenewPeriod         int
 	SpotStrategy            SpotStrategyType
+	SpotPriceLimit          float64
 	KeyPairName             string
+	RamRoleName             string
 }
 
 type CreateInstanceResponse struct {
@@ -623,4 +649,58 @@ func (client *Client) LeaveSecurityGroup(instanceId string, securityGroupId stri
 	response := SecurityGroupResponse{}
 	err := client.Invoke("LeaveSecurityGroup", &args, &response)
 	return err
+}
+
+type AttachInstancesArgs struct {
+	RegionId    common.Region
+	RamRoleName string
+	InstanceIds string
+}
+
+// AttachInstanceRamRole attach instances to ram role
+//
+// You can read doc at https://help.aliyun.com/document_detail/54244.html?spm=5176.doc54245.6.811.zEJcS5
+func (client *Client) AttachInstanceRamRole(args *AttachInstancesArgs) (err error) {
+	response := common.Response{}
+	err = client.Invoke("AttachInstanceRamRole", args, &response)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DetachInstanceRamRole detach instances from ram role
+//
+// You can read doc at https://help.aliyun.com/document_detail/54245.html?spm=5176.doc54243.6.813.bt8RB3
+func (client *Client) DetachInstanceRamRole(args *AttachInstancesArgs) (err error) {
+	response := common.Response{}
+	err = client.Invoke("DetachInstanceRamRole", args, &response)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type DescribeInstanceRamRoleResponse struct {
+	common.Response
+	InstanceRamRoleSets struct {
+		InstanceRamRoleSet []InstanceRamRoleSetType
+	}
+}
+
+type InstanceRamRoleSetType struct {
+	InstanceId  string
+	RamRoleName string
+}
+
+// DescribeInstanceRamRole
+//
+// You can read doc at https://help.aliyun.com/document_detail/54243.html?spm=5176.doc54245.6.812.RgNCoi
+func (client *Client) DescribeInstanceRamRole(args *AttachInstancesArgs) (resp *DescribeInstanceRamRoleResponse, err error) {
+	response := &DescribeInstanceRamRoleResponse{}
+	err = client.Invoke("DescribeInstanceRamRole", args, response)
+	if err != nil {
+		return response, err
+	}
+	return response, nil
 }

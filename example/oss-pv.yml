@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-oss
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  flexVolume:
+    driver: "alicloud/oss"
+    options:
+      bucket: "sigma-python"
+      url: "oss-cn-hangzhou.aliyuncs.com"
+      otherOpts: "-o max_stat_cache_size=0 -o allow_other"

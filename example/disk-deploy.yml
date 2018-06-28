@@ -1,0 +1,24 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-disk-deploy
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-flexvolume-disk
+        image: nginx
+        volumeMounts:
+          - name: "d-bp1j17ifxfasvts3tf40"
+            mountPath: "/data"
+      volumes:
+        - name: "d-bp1j17ifxfasvts3tf40"
+          flexVolume:
+            driver: "alicloud/disk"
+            fsType: "ext4"
+            options:
+              volumeId: "d-bp1j17ifxfasvts3tf40"
