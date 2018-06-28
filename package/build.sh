@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-cd ${GOPATH}/src/gitlab.alibaba-inc.com/acs/flexvolume/
+cd ${GOPATH}/src/github.com/AliyunContainerService/flexvolume/
 GIT_SHA=`git rev-parse --short HEAD || echo "HEAD"`
 
 
@@ -15,13 +15,3 @@ fi
 
 mkdir -p package/bin
 mv flexvolume-linux package/bin/flexvolume
-
-if [ "$1" == "" ]; then
-  cd package
-  versioninfo=`cat ${GOPATH}/src/gitlab.alibaba-inc.com/acs/flexvolume/provider/utils/help.go | grep "VERSION = \"" | grep -v "#"`
-  version=`echo $versioninfo | awk -F '\"' '{ print $2 }'`
-
-  docker build -t=registry.cn-hangzhou.aliyuncs.com/sigma_test/flexvolume:$version ./
-  docker push registry.cn-hangzhou.aliyuncs.com/sigma_test/flexvolume:$version
-  cd ..
-fi
