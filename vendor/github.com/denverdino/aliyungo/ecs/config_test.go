@@ -13,9 +13,8 @@ var (
 	TestAccessKeySecret = os.Getenv("AccessKeySecret")
 	TestSecurityToken   = os.Getenv("SecurityToken")
 	TestRegionID        = common.Region(os.Getenv("RegionId"))
-	TestVpcId           = os.Getenv("VpcId")
 
-	TestInstanceId      = os.Getenv("InstanceId")
+	TestInstanceId      = "MY_TEST_INSTANCEID"
 	TestSecurityGroupId = "MY_TEST_SECURITY_GROUP_ID"
 	TestImageId         = "MY_IMAGE_ID"
 	TestAccountId       = "MY_TEST_ACCOUNT_ID" //Get from https://account.console.aliyun.com
@@ -43,16 +42,6 @@ func NewTestClientForDebug() *Client {
 		testDebugClient.SetDebug(true)
 	}
 	return testDebugClient
-}
-
-var testVpcDebugClient *Client
-
-func NewVpcTestClientForDebug() *Client {
-	if testVpcDebugClient == nil {
-		testVpcDebugClient = NewVPCClient(TestAccessKeyId, TestAccessKeySecret, TestRegionID)
-		testVpcDebugClient.SetDebug(true)
-	}
-	return testVpcDebugClient
 }
 
 var testLocationClient *Client

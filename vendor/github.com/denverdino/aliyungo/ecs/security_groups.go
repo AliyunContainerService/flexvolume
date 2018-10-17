@@ -34,13 +34,6 @@ const (
 	PermissionPolicyDrop   = PermissionPolicy("drop")
 )
 
-type GroupInnerAccessPolicy string
-
-const (
-	GroupInnerAccept = GroupInnerAccessPolicy("Accept")
-	GroupInnerDrop   = GroupInnerAccessPolicy("Drop")
-)
-
 type DescribeSecurityGroupAttributeArgs struct {
 	SecurityGroupId string
 	RegionId        common.Region
@@ -76,8 +69,7 @@ type DescribeSecurityGroupAttributeResponse struct {
 	Permissions       struct {
 		Permission []PermissionType
 	}
-	VpcId             string
-	InnerAccessPolicy GroupInnerAccessPolicy
+	VpcId string
 }
 
 //
@@ -207,21 +199,6 @@ type ModifySecurityGroupAttributeResponse struct {
 func (client *Client) ModifySecurityGroupAttribute(args *ModifySecurityGroupAttributeArgs) error {
 	response := ModifySecurityGroupAttributeResponse{}
 	err := client.Invoke("ModifySecurityGroupAttribute", args, &response)
-	return err
-}
-
-type ModifySecurityGroupPolicyArgs struct {
-	RegionId          common.Region
-	SecurityGroupId   string
-	InnerAccessPolicy GroupInnerAccessPolicy
-}
-
-// ModifySecurityGroupPolicy modifies inner access policy of security group
-//
-// You can read doc at https://www.alibabacloud.com/help/doc-detail/57315.htm
-func (client *Client) ModifySecurityGroupPolicy(args *ModifySecurityGroupPolicyArgs) error {
-	response := common.Response{}
-	err := client.Invoke("ModifySecurityGroupPolicy", args, &response)
 	return err
 }
 

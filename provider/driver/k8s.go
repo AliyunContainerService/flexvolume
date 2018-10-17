@@ -11,7 +11,7 @@ import (
 	nas "github.com/AliyunContainerService/flexvolume/provider/nas"
 	oss "github.com/AliyunContainerService/flexvolume/provider/oss"
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 // VolumePlugin interface for plugins

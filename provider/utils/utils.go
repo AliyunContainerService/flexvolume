@@ -4,13 +4,15 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/metadata"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"reflect"
 	"strings"
+	"syscall"
 )
 
 // used for global ak
@@ -28,6 +30,9 @@ const (
 	credPath        = "/etc/kubernetes/cloud-config"
 	USER_AKID       = "/etc/.volumeak/akId"
 	USER_AKSECRET   = "/etc/.volumeak/akSecret"
+	METADATA_URL    = "http://100.100.100.200/latest/meta-data/"
+	REGIONID_TAG    = "region-id"
+	INSTANCEID_TAG  = "instance-id"
 )
 
 func Succeed(a ...interface{}) Result {
@@ -133,6 +138,33 @@ func IsFileExisting(filename string) bool {
 	return true
 }
 
+// Get regionid instanceid;
+func GetRegionAndInstanceId() (string, string, error) {
+	regionId, err := GetMetaData(REGIONID_TAG)
+	if err != nil {
+		return "", "", err
+	}
+	instanceId, err := GetMetaData(INSTANCEID_TAG)
+	if err != nil {
+		return "", "", err
+	}
+	return regionId, instanceId, nil
+}
+
+// get metadata
+func GetMetaData(resource string) (string, error) {
+	resp, err := http.Get(METADATA_URL + resource)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
 func GetRegionIdAndInstanceId(nodeName string) (string, string, error) {
 	strs := strings.SplitN(nodeName, ".", 2)
 	if len(strs) < 2 {
@@ -217,7 +249,7 @@ func GetSTSAK() (string, string, string) {
 
 	rolename := ""
 	var err error
-	if rolename, err = m.RoleName(); err != nil {
+	if rolename, err = m.Role(); err != nil {
 		log.Fatal("Get role name error: ", err.Error())
 		return "", "", ""
 	}
@@ -268,4 +300,33 @@ func GetLocalSystemAK() (string, string) {
 		return "", ""
 	}
 	return accessKeyID, accessSecret
+}
+
+// PathExists returns true if the specified path exists.
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	} else if os.IsNotExist(err) {
+		return false, nil
+	} else {
+		return false, err
+	}
+}
+
+func IsLikelyNotMountPoint(file string) (bool, error) {
+	stat, err := os.Stat(file)
+	if err != nil {
+		return true, err
+	}
+	rootStat, err := os.Lstat(file + "/..")
+	if err != nil {
+		return true, err
+	}
+	// If the directory has a different device as parent, then it is a mountpoint.
+	if stat.Sys().(*syscall.Stat_t).Dev != rootStat.Sys().(*syscall.Stat_t).Dev {
+		return false, nil
+	}
+
+	return true, nil
 }

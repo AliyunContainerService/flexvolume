@@ -40,7 +40,7 @@ elif [ "$os_release_exist" = "0" ]; then
         if [ `echo $osVersion | grep "7" | wc -l` = "1" ]; then
           host_os="centos-7"
         fi
-    elif [`echo $osId | grep "alios" | wc -l` != "0" ];then
+    elif [ `echo $osId | grep "alios" | wc -l` != "0" ];then
        if [ `echo $osVersion | grep "7" | wc -l` = "1" ]; then
          host_os="centos-7"
        fi
@@ -75,7 +75,7 @@ install_disk() {
             cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk
             chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk
 
-            restart_kubelet="true"
+            # restart_kubelet="true"
         fi
     fi
 
@@ -120,7 +120,7 @@ install_nas() {
             cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas
             chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas
 
-            restart_kubelet="true"
+            # restart_kubelet="true"
         fi
     fi
 }
@@ -191,7 +191,7 @@ install_oss() {
             cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
             chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
 
-            restart_kubelet="true"
+            # restart_kubelet="true"
         fi
     fi
 
@@ -235,11 +235,10 @@ if [ "$ACS_NAS" = "true" ]; then
   install_nas
 fi
 
-
 # restart kubelet
-if [ $restart_kubelet != "false" ]; then
-    /acs/nsenter --mount=/proc/1/ns/mnt service kubelet restart
-fi
+#if [ $restart_kubelet != "false" ]; then
+#   /acs/nsenter --mount=/proc/1/ns/mnt service kubelet restart
+#fi
 
 
 ## monitoring should be here

@@ -87,15 +87,10 @@ spec:
       - name: logdir
         hostPath:
           path: /var/log/alicloud/
+  updateStrategy:
+    type: RollingUpdate
 ```
 
-## 注意事项
-
-使用阿里云云盘时，定义的volumeName需要和VolumeId（DiskId）一致，原因是detach接口目前不支持传递spec；
-
-此问题正在Track中：[https://github.com/kubernetes/kubernetes/issues/52590](https://github.com/kubernetes/kubernetes/issues/52590)
 
 ## ROADMAP
 
-- 支持动态PV
-- 控制台管理PV、PVC

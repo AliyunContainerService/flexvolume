@@ -325,7 +325,7 @@ func TestAttachInstanceRamRole(t *testing.T) {
 }
 
 func TestClient_DescribeInstances(t *testing.T) {
-	client := NetTestLocationClientForDebug()
+	client := NewTestClientForDebug()
 	client.SetSecurityToken(TestSecurityToken)
 
 	args := &DescribeInstancesArgs{

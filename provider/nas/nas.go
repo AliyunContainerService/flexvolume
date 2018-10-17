@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	log "github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/nas"
-	log "github.com/sirupsen/logrus"
+	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 	"os"
 )
 
@@ -19,7 +19,8 @@ type NasOptions struct {
 	Path       string `json:"path"`
 	Vers       string `json:"vers"`
 	Mode       string `json:"mode"`
-	VolumeName string `json:"volumeName"`
+	Opts       string `json:"options"`
+	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
 }
 
 const (
@@ -55,7 +56,7 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 		return utils.Result{Status: "Success"}
 	}
 
-	// TODO: Add NAS white list if needed
+	// Add NAS white list if needed
 	// updateNasWhiteList(opt)
 
 	// Create Mount Path
@@ -65,6 +66,10 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 
 	// Do mount
 	mntCmd := fmt.Sprintf("mount -t nfs -o vers=%s %s:%s %s", opt.Vers, opt.Server, opt.Path, mountPath)
+	if opt.Opts != "" {
+		mntCmd = fmt.Sprintf("mount -t nfs -o vers=%s,%s %s:%s %s", opt.Vers, opt.Opts, opt.Server, opt.Path, mountPath)
+	}
+	log.Infof("Exec Nas Mount Cdm: %s", mntCmd)
 	_, err := utils.Run(mntCmd)
 
 	// Mount to nfs Sub-directory
@@ -98,14 +103,6 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 		}
 	}
 
-	// chmod for sub directory
-	//if opt.Mode != "" && opt.Path != "/" {
-	//	mntCmd := fmt.Sprintf("chmod -R %s %s", opt.Mode, mountPath)
-	//	if _, err := utils.Run(mntCmd); err != nil {
-	//		utils.FinishError("Nas, chmod sub-directory fail: " + err.Error())
-	//	}
-	//}
-
 	// check mount
 	if !utils.IsMounted(mountPath) {
 		utils.FinishError("Check mount fail after mount:" + mountPath)
@@ -121,9 +118,12 @@ func (p *NasPlugin) Unmount(mountPoint string) utils.Result {
 		return utils.Succeed()
 	}
 
-	umntCmd := fmt.Sprintf("umount -f %s", mountPoint)
+	umntCmd := fmt.Sprintf("umount %s", mountPoint)
 	if _, err := utils.Run(umntCmd); err != nil {
-		utils.FinishError("Nas, Umount nfs Fail: " + err.Error())
+		umntCmd = fmt.Sprintf("umount -f %s", mountPoint)
+		if _, err := utils.Run(umntCmd); err != nil {
+			utils.FinishError("Nas, Umount nfs Fail: " + err.Error())
+		}
 	}
 
 	log.Info("Umount nfs Successful: %s", mountPoint)
@@ -153,11 +153,11 @@ func (p *NasPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result
 	return utils.NotSupport()
 }
 
-// 1. mount to /mnt/acs_mnt/k8s_nas/tmp first
+// 1. mount to /mnt/acs_mnt/k8s_nas/temp first
 // 2. run mkdir for sub directory
 // 3. umount the tmep directory
 func (p *NasPlugin) createNasSubDir(opt *NasOptions) {
-	// create mount path
+	// step 1: create mount path
 	if err := utils.CreateDest(NAS_TEMP_MNTPath); err != nil {
 		utils.FinishError("Create Nas temp Directory err: " + err.Error())
 	}
@@ -165,7 +165,7 @@ func (p *NasPlugin) createNasSubDir(opt *NasOptions) {
 		utils.Umount(NAS_TEMP_MNTPath)
 	}
 
-	// do mount
+	// step 2: do mount
 	mntCmd := fmt.Sprintf("mount -t nfs -o vers=%s %s:%s %s", opt.Vers, opt.Server, "/", NAS_TEMP_MNTPath)
 	_, err := utils.Run(mntCmd)
 	if err != nil {
@@ -176,7 +176,7 @@ func (p *NasPlugin) createNasSubDir(opt *NasOptions) {
 		utils.FinishError("Nas, Create Sub Directory err: " + err.Error())
 	}
 
-	// umount after create
+	// step 3: umount after create
 	utils.Umount(NAS_TEMP_MNTPath)
 	log.Info("Create Sub Directory success: ", opt.Path)
 }
@@ -205,7 +205,15 @@ func (p *NasPlugin) checkOptions(opt *NasOptions) bool {
 	}
 
 	// nfs version, support 4.0, 4.1, 3.0
-	if opt.Vers != "4.0" && opt.Vers != "4.1" && opt.Vers != "3.0" {
+	// indeed, 4.1 is not available for aliyun nas now;
+	if opt.Vers == "" {
+		opt.Vers = "4.0"
+	}
+	if opt.Vers == "3.0" {
+		opt.Vers = "3"
+	}
+	if opt.Vers != "4.0" && opt.Vers != "4.1" && opt.Vers != "3" {
+		log.Errorf("NAS: version only support 3.0, 4.0, 4.1 now, %s", opt.Vers)
 		return false
 	}
 
@@ -217,10 +225,23 @@ func (p *NasPlugin) checkOptions(opt *NasOptions) bool {
 		}
 		for i := 0; i < modeLen; i++ {
 			if !strings.Contains(MODE_CHAR, opt.Mode[i:i+1]) {
+				log.Errorf("NAS: mode is illegal, %s", opt.Mode)
 				return false
 			}
 		}
 	}
+
+	// check options
+	if opt.Opts == "" {
+		if opt.Vers == "3" {
+			opt.Opts = "noresvport,nolock,tcp"
+		} else {
+			opt.Opts = "noresvport"
+		}
+	} else if strings.ToLower(opt.Opts) == "none" {
+		opt.Opts = ""
+	}
+
 	return true
 }
 

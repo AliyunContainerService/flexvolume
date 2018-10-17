@@ -3,12 +3,12 @@ package oss
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
-	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	log "github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/ecs"
-	log "github.com/sirupsen/logrus"
-	"os"
+	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
 type OssOptions struct {
@@ -17,7 +17,7 @@ type OssOptions struct {
 	OtherOpts  string `json:"otherOpts"`
 	AkId       string `json:"akId"`
 	AkSecret   string `json:"akSecret"`
-	VolumeName string `json:"volumeName"`
+	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
 }
 
 const (
@@ -36,11 +36,37 @@ func (p *OssPlugin) Init() utils.Result {
 	return utils.Succeed()
 }
 
+// Mount Paras format:
+// /usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
+// mount
+// /var/lib/kubelet/pods/e000259c-4dac-11e8-a884-04163e0f011e/volumes/alicloud~oss/oss1
+// {
+//   "akId":"***",
+//   "akSecret":"***",
+//   "bucket":"oss",
+//   "kubernetes.io/fsType": "",
+//   "kubernetes.io/pod.name": "nginx-oss-deploy-f995c89f4-kj25b",
+//   "kubernetes.io/pod.namespace":"default",
+//   "kubernetes.io/pod.uid":"e000259c-4dac-11e8-a884-04163e0f011e",
+//   "kubernetes.io/pvOrVolumeName":"oss1",
+//   "kubernetes.io/readwrite":"rw",
+//   "kubernetes.io/serviceAccount.name":"default",
+//   "otherOpts":"-o max_stat_cache_size=0 -o allow_other",
+//   "url":"oss-cn-hangzhou.aliyuncs.com"
+// }
 func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 
-	log.Infof("Oss Plugin Mount: ", strings.Join(os.Args, ","))
-
+	// logout oss paras
 	opt := opts.(*OssOptions)
+	argStr := ""
+	for _, tmpStr := range os.Args {
+		if !strings.Contains(tmpStr, "akSecret") {
+			argStr += tmpStr + ", "
+		}
+	}
+	argStr = argStr + "VolumeName: " + opt.VolumeName + ", AkId: " + opt.AkId + ", Bucket: " + opt.Bucket + ", url: " + opt.Url + ", OtherOpts: " + opt.OtherOpts
+	log.Infof("Oss Plugin Mount: ", argStr)
+
 	if !p.checkOptions(opt) {
 		utils.FinishError("OSS Options is illegal ")
 	}
@@ -63,13 +89,19 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	mntCmd := fmt.Sprintf("ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, mountPath, opt.Url, opt.OtherOpts)
 	if out, err := utils.Run(mntCmd); err != nil {
 		out, err = utils.Run(mntCmd + " -f")
-		utils.FinishError("Create OSS volume fail: " + err.Error() + ", out: " + out)
+		if err != nil {
+			utils.FinishError("Create OSS volume fail: " + err.Error() + ", out: " + out)
+		}
 	}
 
 	log.Info("Mount Oss successful: ", mountPath)
 	return utils.Result{Status: "Success"}
 }
 
+// Unmount format
+// /usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
+// unmount
+// /var/lib/kubelet/pods/e000259c-4dac-11e8-a884-00163e0f011e/volumes/alicloud~oss/oss1
 func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Oss Plugin Umount: ", strings.Join(os.Args, ","))
 

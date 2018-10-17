@@ -28,16 +28,6 @@ type SnatTableIdType struct {
 	SnatTableId []string
 }
 
-type IpListsType struct {
-	IpList []IpListItem
-}
-
-type IpListItem struct {
-	IpAddress    string
-	AllocationId string
-	UsingStatus  string
-}
-
 type BandwidthPackageIdType struct {
 	BandwidthPackageId []string
 }
@@ -67,7 +57,6 @@ type NatGatewaySetType struct {
 	BandwidthPackageIds BandwidthPackageIdType
 	ForwardTableIds     ForwardTableIdType
 	SnatTableIds        SnatTableIdType
-	IpLists             IpListsType
 	InstanceChargeType  string
 	Name                string
 	NatGatewayId        string
@@ -158,8 +147,7 @@ func (client *Client) DeleteNatGateway(args *DeleteNatGatewayArgs) error {
 }
 
 type DescribeBandwidthPackagesArgs struct {
-	RegionId common.Region
-	common.Pagination
+	RegionId           common.Region
 	BandwidthPackageId string
 	NatGatewayId       string
 }
@@ -182,13 +170,12 @@ type DescribeBandwidthPackageType struct {
 
 type DescribeBandwidthPackagesResponse struct {
 	common.Response
-	common.PaginationResult
 	BandwidthPackages struct {
 		BandwidthPackage []DescribeBandwidthPackageType
 	}
 }
 
-func (client *Client) DescribeBandwidthPackages(args *DescribeBandwidthPackagesArgs) (*DescribeBandwidthPackagesResponse, error) {
+func (client *Client) DescribeBandwidthPackages(args *DescribeBandwidthPackagesArgs) ([]DescribeBandwidthPackageType, error) {
 	response := &DescribeBandwidthPackagesResponse{}
 
 	err := client.Invoke("DescribeBandwidthPackages", args, response)
@@ -196,7 +183,7 @@ func (client *Client) DescribeBandwidthPackages(args *DescribeBandwidthPackagesA
 		return nil, err
 	}
 
-	return response, err
+	return response.BandwidthPackages.BandwidthPackage, err
 }
 
 type DeleteBandwidthPackageArgs struct {

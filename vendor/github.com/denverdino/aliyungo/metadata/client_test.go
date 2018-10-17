@@ -1,10 +1,10 @@
 package metadata
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 	"testing"
+	"strings"
+	"errors"
 )
 
 func init() {
@@ -100,9 +100,11 @@ func send(resource string) (string, error) {
 	return "", errors.New("unknow resource error.")
 }
 
+
 func TestOK(t *testing.T) {
 	fmt.Println("ok")
 }
+
 
 func TestHostname(t *testing.T) {
 	meta := NewMockMetaData(nil, send)

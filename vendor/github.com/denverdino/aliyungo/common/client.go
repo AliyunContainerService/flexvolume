@@ -25,6 +25,11 @@ type FlattenArray []string
 // SystemDisk_Category => SystemDisk.Category
 type UnderlineString string
 
+// ecs default endpoint
+const (
+       ECSDefaultEndpoint = "https://ecs-cn-hangzhou.aliyuncs.com"
+)
+
 // A Client represents a client of ECS services
 type Client struct {
 	AccessKeyId     string //Access Key Id
@@ -43,11 +48,7 @@ type Client struct {
 // Initialize properties of a client instance
 func (client *Client) Init(endpoint, version, accessKeyId, accessKeySecret string) {
 	client.AccessKeyId = accessKeyId
-	ak := accessKeySecret
-	if !strings.HasSuffix(ak, "&") {
-		ak += "&"
-	}
-	client.AccessKeySecret = ak
+	client.AccessKeySecret = accessKeySecret + "&"
 	client.debug = false
 	handshakeTimeout, err := strconv.Atoi(os.Getenv("TLSHandshakeTimeout"))
 	if err != nil {
@@ -69,6 +70,7 @@ func (client *Client) NewInit(endpoint, version, accessKeyId, accessKeySecret, s
 	client.Init(endpoint, version, accessKeyId, accessKeySecret)
 	client.serviceCode = serviceCode
 	client.regionID = regionID
+	client.setEndpointByLocation(regionID, serviceCode, accessKeyId, accessKeySecret)
 }
 
 // Intialize client object when all properties are ready
@@ -85,6 +87,12 @@ func (client *Client) InitClient() *Client {
 			TLSHandshakeTimeout: time.Duration(handshakeTimeout) * time.Second}
 		client.httpClient = &http.Client{Transport: t}
 	}
+	if client.endpoint == "" {
+		client.setEndpointByLocation(client.regionID, client.serviceCode, client.AccessKeyId, client.AccessKeySecret)
+	}
+	if client.endpoint == "" {
+		client.endpoint = ECSDefaultEndpoint
+	}
 	return client
 }
 
@@ -93,17 +101,9 @@ func (client *Client) NewInitForAssumeRole(endpoint, version, accessKeyId, acces
 	client.securityToken = securityToken
 }
 
-//getLocationEndpoint
-func (client *Client) getEndpointByLocation() string {
-	locationClient := NewLocationClient(client.AccessKeyId, client.AccessKeySecret, client.securityToken)
-	locationClient.SetDebug(true)
-	return locationClient.DescribeOpenAPIEndpoint(client.regionID, client.serviceCode)
-}
-
 //NewClient using location service
-func (client *Client) setEndpointByLocation(region Region, serviceCode, accessKeyId, accessKeySecret, securityToken string) {
-	locationClient := NewLocationClient(accessKeyId, accessKeySecret, securityToken)
-	locationClient.SetDebug(true)
+func (client *Client) setEndpointByLocation(region Region, serviceCode, accessKeyId, accessKeySecret string) {
+	locationClient := NewLocationClient(accessKeyId, accessKeySecret)
 	ep := locationClient.DescribeOpenAPIEndpoint(region, serviceCode)
 	if ep == "" {
 		ep = loadEndpointFromFile(region, serviceCode)
@@ -257,31 +257,9 @@ func (client *Client) SetSecurityToken(securityToken string) {
 	client.securityToken = securityToken
 }
 
-func (client *Client) initEndpoint() error {
-	// if set any value to "CUSTOMIZED_ENDPOINT" could skip location service.
-	// example: export CUSTOMIZED_ENDPOINT=true
-	if os.Getenv("CUSTOMIZED_ENDPOINT") != "" {
-		return nil
-	}
-
-	if client.serviceCode != "" && client.regionID != "" {
-		endpoint := client.getEndpointByLocation()
-		if endpoint == "" {
-			return GetCustomError("InvalidEndpoint", "endpoint is empty,pls check")
-		}
-		client.endpoint = endpoint
-	}
-	return nil
-}
-
 // Invoke sends the raw HTTP request for ECS services
 func (client *Client) Invoke(action string, args interface{}, response interface{}) error {
 	if err := client.ensureProperties(); err != nil {
-		return err
-	}
-
-	//init endpoint
-	if err := client.initEndpoint(); err != nil {
 		return err
 	}
 
@@ -358,11 +336,6 @@ func (client *Client) InvokeByFlattenMethod(action string, args interface{}, res
 		return err
 	}
 
-	//init endpoint
-	if err := client.initEndpoint(); err != nil {
-		return err
-	}
-
 	request := Request{}
 	request.init(client.version, action, client.AccessKeyId, client.securityToken, client.regionID)
 
@@ -436,11 +409,6 @@ func (client *Client) InvokeByFlattenMethod(action string, args interface{}, res
 //2017.1.30 增加了一个path参数，用来拓展访问的地址
 func (client *Client) InvokeByAnyMethod(method, action, path string, args interface{}, response interface{}) error {
 	if err := client.ensureProperties(); err != nil {
-		return err
-	}
-
-	//init endpoint
-	if err := client.initEndpoint(); err != nil {
 		return err
 	}
 
@@ -537,14 +505,4 @@ func GetClientErrorFromString(str string) error {
 
 func GetClientError(err error) error {
 	return GetClientErrorFromString(err.Error())
-}
-
-func GetCustomError(code, message string) error {
-	return &Error{
-		ErrorResponse: ErrorResponse{
-			Code:    code,
-			Message: message,
-		},
-		StatusCode: 400,
-	}
 }

@@ -64,3 +64,5 @@ spec:
       - name: logdir
         hostPath:
           path: /var/log/alicloud/
+  updateStrategy:
+    type: RollingUpdate

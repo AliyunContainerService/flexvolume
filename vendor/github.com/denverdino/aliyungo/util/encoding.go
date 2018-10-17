@@ -62,8 +62,6 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 
 		fieldName := elemType.Field(i).Name
 		anonymous := elemType.Field(i).Anonymous
-		tag := elemType.Field(i).Tag.Get("query")
-		argName := elemType.Field(i).Tag.Get("ArgName")
 		field := elem.Field(i)
 		// TODO Use Tag for validation
 		// tag := typ.Field(i).Tag.Get("tagname")
@@ -118,26 +116,15 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 			case reflect.String:
 				l := field.Len()
 				if l > 0 {
-					if tag == "list" {
-						name := argName
-						if argName == "" {
-							name = fieldName
-						}
-						for i := 0; i < l; i++ {
-							valueName := fmt.Sprintf("%s.%d", name, (i + 1))
-							values.Set(valueName, field.Index(i).String())
-						}
+					strArray := make([]string, l)
+					for i := 0; i < l; i++ {
+						strArray[i] = field.Index(i).String()
+					}
+					bytes, err := json.Marshal(strArray)
+					if err == nil {
+						value = string(bytes)
 					} else {
-						strArray := make([]string, l)
-						for i := 0; i < l; i++ {
-							strArray[i] = field.Index(i).String()
-						}
-						bytes, err := json.Marshal(strArray)
-						if err == nil {
-							value = string(bytes)
-						} else {
-							log.Printf("Failed to convert JSON: %v", err)
-						}
+						log.Printf("Failed to convert JSON: %v", err)
 					}
 				}
 			default:
@@ -175,8 +162,8 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 			}
 		}
 		if value != "" {
-			name := argName
-			if argName == "" {
+			name := elemType.Field(i).Tag.Get("ArgName")
+			if name == "" {
 				name = fieldName
 			}
 			if prefix != "" {
