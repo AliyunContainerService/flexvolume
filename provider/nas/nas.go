@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/denverdino/aliyungo/nas"
 	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 	"os"
