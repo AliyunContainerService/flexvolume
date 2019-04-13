@@ -1,23 +1,28 @@
 package oss
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/ecs"
-	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	"github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
 type OssOptions struct {
-	Bucket     string `json:"bucket"`
-	Url        string `json:"url"`
-	OtherOpts  string `json:"otherOpts"`
-	AkId       string `json:"akId"`
-	AkSecret   string `json:"akSecret"`
-	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
+	Bucket      string `json:"bucket"`
+	Url         string `json:"url"`
+	OtherOpts   string `json:"otherOpts"`
+	AkId        string `json:"akId"`
+	AkSecret    string `json:"akSecret"`
+	VolumeName  string `json:"kubernetes.io/pvOrVolumeName"`
+	SecretAkId  string `json:"kubernetes.io/secret/akId"`
+	SecretAkSec string `json:"kubernetes.io/secret/akSecret"`
 }
 
 const (
@@ -67,8 +72,8 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	argStr = argStr + "VolumeName: " + opt.VolumeName + ", AkId: " + opt.AkId + ", Bucket: " + opt.Bucket + ", url: " + opt.Url + ", OtherOpts: " + opt.OtherOpts
 	log.Infof("Oss Plugin Mount: ", argStr)
 
-	if !p.checkOptions(opt) {
-		utils.FinishError("OSS Options is illegal ")
+	if err := p.checkOptions(opt); err != nil {
+		utils.FinishError("OSS: check option error: " + err.Error())
 	}
 
 	if utils.IsMounted(mountPath) {
@@ -86,12 +91,14 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	}
 
 	// default use allow_other
-	mntCmd := fmt.Sprintf("ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, mountPath, opt.Url, opt.OtherOpts)
+	mntCmd := fmt.Sprintf("systemd-run --scope -- ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, mountPath, opt.Url, opt.OtherOpts)
+	systemdCmd := fmt.Sprintf("which systemd-run")
+	if _, err := utils.Run(systemdCmd); err != nil {
+		mntCmd = fmt.Sprintf("ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, mountPath, opt.Url, opt.OtherOpts)
+		log.Infof("Mount oss bucket without systemd-run")
+	}
 	if out, err := utils.Run(mntCmd); err != nil {
-		out, err = utils.Run(mntCmd + " -f")
-		if err != nil {
-			utils.FinishError("Create OSS volume fail: " + err.Error() + ", out: " + out)
-		}
+		utils.FinishError("Create OSS volume fail: " + err.Error() + ", out: " + out)
 	}
 
 	log.Info("Mount Oss successful: ", mountPath)
@@ -105,6 +112,9 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Oss Plugin Umount: ", strings.Join(os.Args, ","))
 
+	// check subpath volume umount if exist.
+	checkSubpathVolumes(mountPoint)
+
 	if !utils.IsMounted(mountPoint) {
 		return utils.Succeed()
 	}
@@ -112,11 +122,56 @@ func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 	// do umount
 	umntCmd := fmt.Sprintf("fusermount -u %s", mountPoint)
 	if _, err := utils.Run(umntCmd); err != nil {
-		utils.FinishError("Umount OSS Fail: " + err.Error())
+		if strings.Contains(err.Error(), "Device or resource busy") {
+			lazyUmntCmd := fmt.Sprintf("fusermount -uz %s", mountPoint)
+			if _, err := utils.Run(lazyUmntCmd); err != nil {
+				utils.FinishError("Lazy Umount OSS Fail: " + err.Error())
+			}
+			log.Infof("Lazy umount Oss path successful: ", mountPoint)
+			return utils.Succeed()
+		} else {
+			utils.FinishError("Umount OSS Fail: " + err.Error())
+		}
 	}
 
 	log.Info("Umount Oss path successful: ", mountPoint)
 	return utils.Succeed()
+}
+
+// check if subPath volume exist, if subpath is mounted, umount it;
+// /var/lib/kubelet/pods/6dd977d1-302a-11e9-b51c-00163e0cd246/volumes/alicloud~oss/oss1
+// /var/lib/kubelet/pods/6dd977d1-302a-11e9-b51c-00163e0cd246/volume-subpaths/oss1/nginx-flexvolume-oss/0
+func checkSubpathVolumes(mountPoint string) {
+	podId := ""
+	volumeName := filepath.Base(mountPoint)
+	podsSplit := strings.Split(mountPoint, "pods")
+	if len(podsSplit) >= 2 {
+		volumesSplit := strings.Split(podsSplit[1], "volumes")
+		if len(volumesSplit) >= 2 {
+			tmpPid := volumesSplit[0]
+			podId = tmpPid[1 : len(tmpPid)-1]
+		}
+	}
+	if podId != "" {
+		subPathRootDir := "/var/lib/kubelet/pods/" + podId + "/volume-subpaths/" + volumeName
+		if ! utils.IsFileExisting(subPathRootDir) {
+			return
+		}
+		checkCmd := fmt.Sprintf("mount | grep %s", subPathRootDir)
+		if out, err := utils.Run(checkCmd); err == nil {
+			subMntList := strings.Split(out, "\n")
+			for _, mntItem := range subMntList {
+				strList := strings.Split(mntItem, " ")
+				if len(strList) > 3 {
+					mntPoint := strList[2]
+					umntCmd := fmt.Sprintf("fusermount -u %s", mntPoint)
+					if _, err := utils.Run(umntCmd); err != nil {
+						log.Info("Umount Oss path failed: %s with error: ", mntPoint, err.Error())
+					}
+				}
+			}
+		}
+	}
 }
 
 func (p *OssPlugin) Attach(opts interface{}, nodeName string) utils.Result {
@@ -173,11 +228,23 @@ func (p *OssPlugin) saveCredential(options *OssOptions) error {
 }
 
 // Check oss options
-func (p *OssPlugin) checkOptions(opt *OssOptions) bool {
+func (p *OssPlugin) checkOptions(opt *OssOptions) error {
 	if opt.Url == "" || opt.Bucket == "" {
-		return false
+		return errors.New("Oss: Url or bucket is empty")
 	}
 
+	if opt.SecretAkId != "" && opt.SecretAkSec != "" {
+		tmpId, err := base64.StdEncoding.DecodeString(opt.SecretAkId)
+		if err != nil {
+			return errors.New("Oss: SecretAkId decode error")
+		}
+		opt.AkId = string(tmpId)
+		tmpSec, err := base64.StdEncoding.DecodeString(opt.SecretAkSec)
+		if err != nil {
+			return errors.New("Oss: SecretAkSec decode error")
+		}
+		opt.AkSecret = string(tmpSec)
+	}
 	// if not input ak from user, use the default ak value
 	if opt.AkId == "" || opt.AkSecret == "" {
 		opt.AkId, opt.AkSecret = utils.GetLocalAK()
@@ -185,8 +252,8 @@ func (p *OssPlugin) checkOptions(opt *OssOptions) bool {
 
 	if opt.OtherOpts != "" {
 		if !strings.HasPrefix(opt.OtherOpts, "-o ") {
-			return false
+			return errors.New("Oss: OtherOpts format error: " + opt.OtherOpts)
 		}
 	}
-	return true
+	return nil
 }

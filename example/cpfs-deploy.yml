@@ -1,0 +1,24 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-nas-deploy
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-flexvolume-cpfs
+        image: nginx
+        volumeMounts:
+          - name: "cpfs1"
+            mountPath: "/data"
+      volumes:
+        - name: "cpfs1"
+          flexVolume:
+            driver: "alicloud/cpfs"
+            options:
+              server: "192.168.0.1@tcp"
+              fileSystem: "cpfs"

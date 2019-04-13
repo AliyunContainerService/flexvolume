@@ -27,6 +27,8 @@ if [ "$lsb_release_exist" = "0" ]; then
         host_os="ubuntu-1404"
     elif [ `echo $os_info | grep 16.04 | wc -l` != "0" ]; then
         host_os="ubuntu-1604"
+    elif [ `echo $os_info | grep Aliyun | wc -l` != "0" ]; then
+        host_os="alios"
     else
         echo "OS is not ubuntu 1604/1404, Centos7"
         exit 1
@@ -92,7 +94,7 @@ install_disk() {
 install_nas() {
     # install nfs-client
     if [ ! `/acs/nsenter --mount=/proc/1/ns/mnt which mount.nfs4` ]; then
-        if [ "$host_os" = "centos-7-4" ] || [ "$host_os" = "centos-7-3" ] || [ "$host_os" = "centos-7-5" ] || [ "$host_os" = "centos-7" ]; then
+        if [ "$host_os" = "centos-7-4" ] || [ "$host_os" = "centos-7-3" ] || [ "$host_os" = "centos-7-5" ] || [ "$host_os" = "centos-7" ] || [ "$host_os" = "alios" ] ; then
             /acs/nsenter --mount=/proc/1/ns/mnt yum install -y nfs-utils
 
         elif [ "$host_os" = "ubuntu-1404" ] || [ "$host_os" = "ubuntu-1604" ]; then
@@ -100,6 +102,13 @@ install_nas() {
             /acs/nsenter --mount=/proc/1/ns/mnt apt-get install -y nfs-common
         fi
     fi
+
+    # install lsof tool
+    #if [ ! `/acs/nsenter --mount=/proc/1/ns/mnt which lsof` ]; then
+    #    if [ "$host_os" = "centos-7-4" ] || [ "$host_os" = "centos-7-3" ] || [ "$host_os" = "centos-7-5" ] || [ "$host_os" = "centos-7" ]; then
+    #        /acs/nsenter --mount=/proc/1/ns/mnt yum install -y lsof
+    #    fi
+    #fi
 
     # first install
     if [ ! -f "/host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas" ];then
@@ -123,6 +132,7 @@ install_nas() {
             # restart_kubelet="true"
         fi
     fi
+
 }
 
 install_oss() {
@@ -131,7 +141,7 @@ install_oss() {
 
     # install OSSFS
     if [ ! `/acs/nsenter --mount=/proc/1/ns/mnt which ossfs` ]; then
-        if [ "$host_os" = "centos-7-4" ] || [ "$host_os" = "centos-7-3" ] || [ "$host_os" = "centos-7-5" ] || [ "$host_os" = "centos-7" ]; then
+        if [ "$host_os" = "centos-7-4" ] || [ "$host_os" = "centos-7-3" ] || [ "$host_os" = "centos-7-5" ] || [ "$host_os" = "centos-7" ] || [ "$host_os" = "alios" ]; then
             cp /acs/ossfs_${ossfsVer}_centos7.0_x86_64.rpm /host/usr/
             /acs/nsenter --mount=/proc/1/ns/mnt yum localinstall -y /usr/ossfs_${ossfsVer}_centos7.0_x86_64.rpm
 
@@ -217,6 +227,75 @@ install_oss() {
     #fi
 }
 
+install_cpfs() {
+    # luster version
+    lustreversion="2.10.0-1"
+    cpfsversion="1.2.1"
+    kernelversion74="3.10.0-693.2.2"
+    kernelversion75="3.10.0-862.14.4"
+    kernelversion76="3.10.0-957.5.1"
+    kernelversion=${kernelversion74}
+
+    if [ "$host_os" = "centos-7-4" ] || [ "$host_os" = "centos-7-3" ] || [ "$host_os" = "centos-7-5" ] || [ "$host_os" = "centos-7" ]; then
+        # reove lustre-client
+        if [ `/acs/nsenter --mount=/proc/1/ns/mnt rpm -qa | grep kmod-lustre-client-$lustreversion | wc -l` != "0" ]; then
+            /acs/nsenter --mount=/proc/1/ns/mnt yum remove -y kmod-lustre-client
+        fi
+
+        kernelInfo=`/acs/nsenter --mount=/proc/1/ns/mnt uname -a | awk '{print $3}'`
+
+        if [ ${kernelInfo} = ${kernelversion74}".el7.x86_64" ]; then
+            kernelversion=${kernelversion74}
+        elif [ ${kernelInfo} = ${kernelversion75}".el7.x86_64" ]; then
+            kernelversion=${kernelversion75}
+        elif [ ${kernelInfo} = ${kernelversion76}".el7.x86_64" ]; then
+            kernelversion=${kernelversion76}
+        fi
+
+        if [ `/acs/nsenter --mount=/proc/1/ns/mnt rpm -qa | grep kernel-devel-${kernelversion} | wc -l` = "0" ]; then
+            cp /acs/kernel-devel-${kernelversion}.el7.x86_64.rpm /host/usr/
+            /acs/nsenter --mount=/proc/1/ns/mnt rpm -ivh /usr/kernel-devel-${kernelversion}.el7.x86_64.rpm
+        fi
+
+        # install/upgrade cpfs client
+        cpfs_num=`/acs/nsenter --mount=/proc/1/ns/mnt rpm -qa | grep cpfs-client- | wc -l`
+        cpfsver_num=`/acs/nsenter --mount=/proc/1/ns/mnt rpm -qa | grep cpfs-client-$cpfsversion | wc -l`
+
+        if [ "${cpfsver_num}" = "0" ]; then
+            # remove old version
+            if [ "${cpfs_num}" != "0" ]; then
+                /acs/nsenter --mount=/proc/1/ns/mnt yum remove -y cpfs-client
+            fi
+            # install cpfs client
+            cp /acs/cpfs-client-${cpfsversion}-centos.x86_64.rpm /host/usr/
+            /acs/nsenter --mount=/proc/1/ns/mnt yum install -y /usr/cpfs-client-${cpfsversion}-centos.x86_64.rpm
+        fi
+        if [ ! `/acs/nsenter --mount=/proc/1/ns/mnt which mount.lustre` ]; then
+            /acs/nsenter --mount=/proc/1/ns/mnt service cpfs-client rebuild
+        fi
+    fi
+
+    # first install cpfs
+    if [ ! -f "/host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/cpfs" ];then
+        mkdir -p /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/
+        cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/cpfs
+        chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/cpfs
+
+    # upgrade cpfs
+    else
+        oldmd5=`md5sum /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/cpfs | awk '{print $1}'`
+        newmd5=`md5sum /acs/flexvolume | awk '{print $1}'`
+
+        # install a new bianary
+        if [ "$oldmd5" != "$newmd5" ]; then
+            rm -rf /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/cpfs
+            cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/cpfs
+            chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~cpfs/cpfs
+
+        fi
+    fi
+}
+
 # if kubelet not disable controller, exit
 count=`ps -ef | grep kubelet | grep "enable-controller-attach-detach=false" | grep -v "grep" | wc -l`
 if [ "$count" = "0" ]; then
@@ -235,14 +314,10 @@ if [ "$ACS_NAS" = "true" ]; then
   install_nas
 fi
 
-# restart kubelet
-#if [ $restart_kubelet != "false" ]; then
-#   /acs/nsenter --mount=/proc/1/ns/mnt service kubelet restart
-#fi
+if [ "$ACS_CPFS" = "true" ]; then
+  install_cpfs
+fi
 
 
 ## monitoring should be here
 /acs/flexvolume monitoring
-
-# temp sleep
-# sleep 1000000
