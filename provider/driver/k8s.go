@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	cpfs "github.com/AliyunContainerService/flexvolume/provider/cpfs"
 	disk "github.com/AliyunContainerService/flexvolume/provider/disk"
 	monitor "github.com/AliyunContainerService/flexvolume/provider/monitor"

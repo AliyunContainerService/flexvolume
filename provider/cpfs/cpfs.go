@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AliyunContainerService/flexvolume/provider/utils"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
 	"path/filepath"
