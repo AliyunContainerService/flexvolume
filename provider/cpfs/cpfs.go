@@ -1,10 +1,9 @@
-// +build linux
 package cpfs
 
 import (
 	"errors"
 	"fmt"
-	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
+	"github.com/AliyunContainerService/flexvolume/provider/utils"
 	log "github.com/Sirupsen/logrus"
 	"os"
 	"path"
@@ -119,20 +118,17 @@ func (p *CpfsPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Cpfs Plugin Umount: %s", strings.Join(os.Args, ","))
 
 	if !utils.IsMounted(mountPoint) {
-		log.Info("Cpfs Not mounted, not need Umount: %s", mountPoint)
+		log.Info("Cpfs Not mounted, not need Umount:", mountPoint)
 		return utils.Succeed()
 	}
 
 	umntCmd := fmt.Sprintf("umount %s", mountPoint)
 	if _, err := utils.Run(umntCmd); err != nil {
-		umntCmd = fmt.Sprintf("umount -f %s", mountPoint)
-		if _, err := utils.Run(umntCmd); err != nil {
-			log.Errorf("Cpfs, Umount cpfs Fail: %s, %s", err.Error(), mountPoint)
-			utils.FinishError("Cpfs, Umount nfs Fail: " + err.Error())
-		}
+		log.Errorf("Cpfs, Umount cpfs Fail: %s, %s", err.Error(), mountPoint)
+		utils.FinishError("Cpfs, Umount nfs Fail: " + err.Error())
 	}
 
-	log.Info("Umount Cpfs Successful: %s", mountPoint)
+	log.Info("Umount Cpfs Successful:", mountPoint)
 	return utils.Succeed()
 }
 

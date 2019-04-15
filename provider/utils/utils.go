@@ -1,9 +1,6 @@
-// +build windows
 package utils
 
 import (
-	"bufio"
-	"bytes"
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,10 +10,10 @@ import (
 	"os/exec"
 	"reflect"
 	"strings"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/metadata"
-	"github.com/pkg/errors"
 )
 
 // used for global ak
@@ -71,7 +68,6 @@ func Finish(result Result) {
 	} else {
 		fmt.Println(string(res))
 	}
-	log.Info("Finish with result: ", string(res))
 	os.Exit(code)
 }
 
@@ -80,18 +76,20 @@ func FinishError(message string) {
 	Finish(Fail(message))
 }
 
-type PlugCapabilities struct {
-	Attach bool `json:"attach"`
-}
-
 // Result
 type Result struct {
-	Status       string            `json:"status"`
-	Message      string            `json:"message,omitempty"`
-	Device       string            `json:"device,omitempty"`
-	Capabilities *PlugCapabilities `json:"capabilities,omitempty"`
-	Attached     bool              `json:"attached,omitempty"`
-	VolumeName   string            `json:"volumeName,omitempty"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+	Device  string `json:"device,omitempty"`
+}
+
+// run shell command
+func Run(cmd string) (string, error) {
+	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("Failed to run cmd: " + cmd + ", with out: " + string(out) + ", with error: " + err.Error())
+	}
+	return string(out), nil
 }
 
 func CreateDest(dest string) error {
@@ -114,7 +112,7 @@ func CreateDest(dest string) error {
 func IsMounted(mountPath string) bool {
 	cmd := fmt.Sprintf("mount | grep \"%s type\" | grep -v grep", mountPath)
 	out, err := Run(cmd)
-	if err != nil || len(out) == 0 {
+	if err != nil || out == "" {
 		return false
 	}
 	return true
@@ -317,47 +315,19 @@ func PathExists(path string) (bool, error) {
 	}
 }
 
-var powershell string
-
-func init() {
-	powershell, _ = exec.LookPath("powershell.exe")
-}
-
-func cmdOut(args ...string) (string, error) {
-	args = append([]string{"-NoProfile", "-NonInteractive"}, args...)
-	cmd := exec.Command(powershell, args...)
-	log.Debugf("[executing ==>] : %v %v", powershell, strings.Join(args, " "))
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	log.Debugf("[stdout ==>]: %s", stdout.String())
-	log.Debugf("[stderr ==>]: %s", stderr.String())
-	return stdout.String(), errors.Wrap(err, stderr.String())
-}
-
-func cmd(args ...string) error {
-	_, err := cmdOut(args...)
-	return err
-}
-
-// run powershell command
-func Run(cmd string) ([]string, error) {
-	out, err := cmdOut(cmd)
+func IsLikelyNotMountPoint(file string) (bool, error) {
+	stat, err := os.Stat(file)
 	if err != nil {
-		return []string{}, fmt.Errorf("Failed to run cmd: " + cmd + ", with out: " + string(out) + ", with error: " + err.Error())
+		return true, err
 	}
-	return parseLines(out), nil
-}
-
-func parseLines(stdout string) []string {
-	resp := []string{}
-
-	s := bufio.NewScanner(strings.NewReader(stdout))
-	for s.Scan() {
-		resp = append(resp, s.Text())
+	rootStat, err := os.Lstat(file + "/..")
+	if err != nil {
+		return true, err
+	}
+	// If the directory has a different device as parent, then it is a mountpoint.
+	if stat.Sys().(*syscall.Stat_t).Dev != rootStat.Sys().(*syscall.Stat_t).Dev {
+		return false, nil
 	}
 
-	return resp
+	return true, nil
 }

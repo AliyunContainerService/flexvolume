@@ -70,7 +70,7 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 		}
 	}
 	argStr = argStr + "VolumeName: " + opt.VolumeName + ", AkId: " + opt.AkId + ", Bucket: " + opt.Bucket + ", url: " + opt.Url + ", OtherOpts: " + opt.OtherOpts
-	log.Infof("Oss Plugin Mount: ", argStr)
+	log.Infof("Oss Plugin Mount: %s", argStr)
 
 	if err := p.checkOptions(opt); err != nil {
 		utils.FinishError("OSS: check option error: " + err.Error())
@@ -110,7 +110,7 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 // unmount
 // /var/lib/kubelet/pods/e000259c-4dac-11e8-a884-00163e0f011e/volumes/alicloud~oss/oss1
 func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
-	log.Infof("Oss Plugin Umount: ", strings.Join(os.Args, ","))
+	log.Infof("Oss Plugin Umount: %s", strings.Join(os.Args, ","))
 
 	// check subpath volume umount if exist.
 	checkSubpathVolumes(mountPoint)
@@ -127,7 +127,7 @@ func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 			if _, err := utils.Run(lazyUmntCmd); err != nil {
 				utils.FinishError("Lazy Umount OSS Fail: " + err.Error())
 			}
-			log.Infof("Lazy umount Oss path successful: ", mountPoint)
+			log.Infof("Lazy umount Oss path successful: %s", mountPoint)
 			return utils.Succeed()
 		} else {
 			utils.FinishError("Umount OSS Fail: " + err.Error())
@@ -166,7 +166,7 @@ func checkSubpathVolumes(mountPoint string) {
 					mntPoint := strList[2]
 					umntCmd := fmt.Sprintf("fusermount -u %s", mntPoint)
 					if _, err := utils.Run(umntCmd); err != nil {
-						log.Info("Umount Oss path failed: %s with error: ", mntPoint, err.Error())
+						log.Info("Umount Oss path failed: with error:", mntPoint, err.Error())
 					}
 				}
 			}

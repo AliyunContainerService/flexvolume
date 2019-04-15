@@ -1,4 +1,3 @@
-// +build linux
 package disk
 
 import (
@@ -110,7 +109,7 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 		}
 		time.Sleep(2000 * time.Millisecond)
 	}
-	log.Infof("Disk is ready to attach: ", opt.VolumeName, opt.VolumeId, opt.FsType)
+	log.Infof("Disk is ready to attach: %s, %s, %s", opt.VolumeName, opt.VolumeId, opt.FsType)
 
 	// multi disk attach at the same time
 	// lck file created under /tmp/

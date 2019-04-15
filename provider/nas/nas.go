@@ -152,7 +152,7 @@ func (p *NasPlugin) Unmount(mountPoint string) utils.Result {
 		}
 	}
 
-	log.Info("Umount nfs Successful: %s", mountPoint)
+	log.Info("Umount nfs Successful:", mountPoint)
 	return utils.Succeed()
 }
 

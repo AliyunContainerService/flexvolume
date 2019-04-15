@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
@@ -52,27 +53,27 @@ func Monitoring() {
 		if os.Getenv("ACS_DISK") == "true" {
 			mntCmd := fmt.Sprintf("%s %s --version", NSENTER_CMD, DISK_BIN)
 			if out, err := utils.Run(mntCmd); err != nil {
-				utils.Printf("Warning, Monitoring disk error: %s", err.Error())
+				log.Printf("Warning, Monitoring disk error: %s", err.Error())
 			} else if out != version {
-				utils.Printf("Warning, the disk plugin version is not right, running: %s, expect: %s", out, version)
+				log.Printf("Warning, the disk plugin version is not right, running: %s, expect: %s", out, version)
 			}
 		}
 
 		if os.Getenv("ACS_NAS") == "true" {
 			mntCmd := fmt.Sprintf("%s %s --version", NSENTER_CMD, NAS_BIN)
 			if out, err := utils.Run(mntCmd); err != nil {
-				utils.Printf("Warning, Monitoring nas error: %s", err.Error())
+				log.Printf("Warning, Monitoring nas error: %s", err.Error())
 			} else if out != version {
-				utils.Printf("Warning, the nas plugin version is not right, running: %s, expect: %s", out, version)
+				log.Printf("Warning, the nas plugin version is not right, running: %s, expect: %s", out, version)
 			}
 		}
 
 		if os.Getenv("ACS_OSS") == "true" {
 			mntCmd := fmt.Sprintf("%s %s --version", NSENTER_CMD, OSS_BIN)
 			if out, err := utils.Run(mntCmd); err != nil {
-				utils.Printf("Warning, Monitoring oss error: %s", err.Error())
+				log.Printf("Warning, Monitoring oss error: %s", err.Error())
 			} else if out != version {
-				utils.Printf("Warning, the Oss plugin version is not right, running: %s, expect: %s", out, version)
+				log.Printf("Warning, the Oss plugin version is not right, running: %s, expect: %s", out, version)
 			}
 		}
 
@@ -86,7 +87,7 @@ func parse_flexvolume_host_config() {
 		if utils.IsFileExisting(FLEXVOLUME_CONFIG_FILE) {
 			raw, err := ioutil.ReadFile(FLEXVOLUME_CONFIG_FILE)
 			if err != nil {
-				utils.Errorf("Read flexvolume config file error:", err.Error())
+				log.Errorf("Read flexvolume config file error: %s", err.Error())
 				continue
 			}
 			lines := strings.Split(string(raw), "\n")

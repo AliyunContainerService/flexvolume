@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
@@ -41,17 +42,17 @@ func fix_issue_orphan_pod() {
 				flagOrphanExist = true
 				splitStr := strings.Split(line, "Orphaned pod")
 				if len(splitStr) < 2 {
-					utils.Warnf("Orphan Pod: Error orphaned line format: %s", line)
+					log.Warnf("Orphan Pod: Error orphaned line format: %s", line)
 					continue
 				}
 				partStr := strings.Split(splitStr[1], "\"")
 				if len(partStr) < 2 {
-					utils.Warnf("Orphan Pod: Error line format: %s", line)
+					log.Warnf("Orphan Pod: Error line format: %s", line)
 					continue
 				}
 				orphanUid := partStr[1]
 				if len(strings.Split(orphanUid, "-")) != 5 {
-					utils.Warnf("Orphan Pod: Error pod Uid format: %s, %s", orphanUid, line)
+					log.Warnf("Orphan Pod: Error pod Uid format: %s, %s", orphanUid, line)
 					continue
 				}
 				if strings.Contains(podFixedList, orphanUid) {
@@ -69,7 +70,7 @@ func fix_issue_orphan_pod() {
 					}
 					storagePluginDirs, err := ioutil.ReadDir(volPodPath)
 					if err != nil {
-						utils.Errorf("Orphan Pod: read directory error: %s, %s", err.Error(), volPodPath)
+						log.Errorf("Orphan Pod: read directory error: %s, %s", err.Error(), volPodPath)
 						continue
 					}
 
@@ -77,17 +78,17 @@ func fix_issue_orphan_pod() {
 						dirName := storagePluginDir.Name()
 						mountPoint := filepath.Join(volHostPath, dirName)
 						if IsHostMounted(mountPoint) {
-							utils.Infof("Orphan Pod: unmount directory: %s", mountPoint)
+							log.Infof("Orphan Pod: unmount directory: %s", mountPoint)
 							HostUmount(mountPoint)
 						}
 						// remove empty directory
 						if (!IsHostMounted(mountPoint)) && IsHostEmpty(mountPoint) {
-							utils.Infof("Orphan Pod: remove directory: %s, log info: %s", mountPoint, line)
+							log.Infof("Orphan Pod: remove directory: %s, log info: %s", mountPoint, line)
 							RemoveHostPath(mountPoint)
 						} else if (!IsHostMounted(mountPoint)) && !IsHostEmpty(mountPoint) {
-							utils.Infof("Orphan Pod: Cannot remove directory as not empty: %s", mountPoint)
+							log.Infof("Orphan Pod: Cannot remove directory as not empty: %s", mountPoint)
 						} else {
-							utils.Infof("Orphan Pod: directory mounted yet: %s", mountPoint)
+							log.Infof("Orphan Pod: directory mounted yet: %s", mountPoint)
 						}
 					}
 				}
@@ -110,7 +111,7 @@ func ReadFileLines(fname string) []string {
 	// Open file
 	file, err := os.Open(fname)
 	if err != nil {
-		utils.Errorf("open file error: %s \n", err.Error())
+		log.Errorf("open file error: %s \n", err.Error())
 		return strList
 	}
 	defer file.Close()
@@ -119,18 +120,18 @@ func ReadFileLines(fname string) []string {
 	buf := make([]byte, 2000)
 	stat, err := os.Stat(fname)
 	if err != nil {
-		utils.Errorf("stat file error: %s \n", err.Error())
+		log.Errorf("stat file error: %s \n", err.Error())
 		return strList
 	}
 
 	start := stat.Size() - 2000
 	if stat.Size() < 2000 {
-		utils.Infof("log file is less than 2k.")
+		log.Infof("log file is less than 2k.")
 		return strList
 	}
 	_, err = file.ReadAt(buf, start)
 	if err != nil {
-		utils.Errorf("read file error: %s \n", err.Error())
+		log.Errorf("read file error: %s \n", err.Error())
 		return strList
 	}
 
