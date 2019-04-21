@@ -339,7 +339,7 @@ func (p *DiskPlugin) Waitforattach(devicePath string, opts interface{}) utils.Re
 	if devicePath == "" {
 		utils.FinishError("Waitforattach, devicePath is empty, cannot used for Volume: " + opt.VolumeName)
 	}
-	if ! utils.IsFileExisting(devicePath) {
+	if !utils.IsFileExisting(devicePath) {
 		utils.FinishError("Waitforattach, devicePath: " + devicePath + " is not exist, cannot used for Volume: " + opt.VolumeName)
 	}
 

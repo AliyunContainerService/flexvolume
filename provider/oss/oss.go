@@ -154,7 +154,7 @@ func checkSubpathVolumes(mountPoint string) {
 	}
 	if podId != "" {
 		subPathRootDir := "/var/lib/kubelet/pods/" + podId + "/volume-subpaths/" + volumeName
-		if ! utils.IsFileExisting(subPathRootDir) {
+		if !utils.IsFileExisting(subPathRootDir) {
 			return
 		}
 		checkCmd := fmt.Sprintf("mount | grep %s", subPathRootDir)

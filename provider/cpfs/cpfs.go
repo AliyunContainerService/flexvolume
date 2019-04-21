@@ -175,7 +175,7 @@ func (p *CpfsPlugin) checkOptions(opt *CpfsOptions) error {
 	}
 
 	opt.SubPath = strings.TrimSpace(opt.SubPath)
-	if opt.SubPath != "" && ! strings.HasPrefix(opt.SubPath, "/") {
+	if opt.SubPath != "" && !strings.HasPrefix(opt.SubPath, "/") {
 		opt.SubPath = "/" + opt.SubPath
 	}
 

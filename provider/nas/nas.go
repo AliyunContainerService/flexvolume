@@ -125,7 +125,7 @@ func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 func checkSystemNasConfig() {
 	updateNasConfig := false
 	sunRpcFile := "/etc/modprobe.d/sunrpc.conf"
-	if ! utils.IsFileExisting(sunRpcFile) {
+	if !utils.IsFileExisting(sunRpcFile) {
 		updateNasConfig = true
 	} else {
 		chkCmd := fmt.Sprintf("cat %s | grep tcp_slot_table_entries | grep 128 | grep -v grep | wc -l", sunRpcFile)
@@ -168,7 +168,7 @@ func (p *NasPlugin) Unmount(mountPoint string) utils.Result {
 		networkUnReachable := false
 		noOtherPodUsed := false
 		nfsServer := p.getNasServerInfo(mountPoint)
-		if nfsServer != "" && ! p.isNasServerReachable(nfsServer) {
+		if nfsServer != "" && !p.isNasServerReachable(nfsServer) {
 			log.Warnf("NFS, Connect to server: %s failed, umount to %s", nfsServer, mountPoint)
 			networkUnReachable = true
 		}
@@ -189,7 +189,7 @@ func (p *NasPlugin) Unmount(mountPoint string) utils.Result {
 	return utils.Succeed()
 }
 
-func (p *NasPlugin) getNasServerInfo(mountPoint string) (string) {
+func (p *NasPlugin) getNasServerInfo(mountPoint string) string {
 	getNasServerPath := fmt.Sprintf("findmnt %s | grep %s | grep -v grep | awk '{print $2}'", mountPoint, mountPoint)
 	serverAndPath, _ := utils.Run(getNasServerPath)
 	serverAndPath = strings.TrimSpace(serverAndPath)
