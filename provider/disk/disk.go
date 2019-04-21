@@ -17,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Const values for disk
 const (
 	KUBERNETES_ALICLOUD_DISK_DRIVER = "alicloud_disk"
 	VolumeDir                       = "/etc/kubernetes/volumes/disk/"
@@ -27,30 +28,36 @@ const (
 	ECSDEFAULTENDPOINT              = "https://ecs-cn-hangzhou.aliyuncs.com"
 )
 
+// DiskOptions define the disk parameters
 type DiskOptions struct {
 	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
 	FsType     string `json:"kubernetes.io/fsType"`
 	VolumeId   string `json:"volumeId"`
 }
 
+// the iddentity for http headker
 var KUBERNETES_ALICLOUD_IDENTITY = fmt.Sprintf("Kubernetes.Alicloud/Flexvolume.Disk-%s", utils.PluginVersion())
+// default region for aliyun sdk usage
 var DEFAULT_REGION = common.Hangzhou
 
+// DiskPlugin define DiskPlugin
 type DiskPlugin struct {
 	client *ecs.Client
 }
 
+// NewOptions define NewOptions
 func (p *DiskPlugin) NewOptions() interface{} {
 	return &DiskOptions{}
 }
 
+// Init define Init for DiskPlugin
 func (p *DiskPlugin) Init() utils.Result {
 	return utils.Succeed()
 }
 
-// attach with NodeName and Options
-// nodeName: regionId.instanceId, exammple: cn-hangzhou.i-bp12gei4ljuzilgwzahc
-// options: {"kubernetes.io/fsType": "", "kubernetes.io/pvOrVolumeName": "", "kubernetes.io/readwrite": "", "volumeId":""}
+// Attach attach with NodeName and Options
+// Attach: nodeName: regionId.instanceId, exammple: cn-hangzhou.i-bp12gei4ljuzilgwzahc
+// Attach: options: {"kubernetes.io/fsType": "", "kubernetes.io/pvOrVolumeName": "", "kubernetes.io/readwrite": "", "volumeId":""}
 func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 
 	log.Infof("Disk Plugin Attach: %s", strings.Join(os.Args, ","))
@@ -177,7 +184,7 @@ func (p *DiskPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	}
 }
 
-// Get devices like /dev/vd**
+// GetCurrentDevices: Get devices like /dev/vd**
 func GetCurrentDevices() []string {
 	var devices []string
 	files, _ := ioutil.ReadDir("/dev")
@@ -189,7 +196,7 @@ func GetCurrentDevices() []string {
 	return devices
 }
 
-// current kubelet call detach not provide plugin spec;
+// Detach current kubelet call detach not provide plugin spec;
 // this issue is tracked by: https://github.com/kubernetes/kubernetes/issues/52590
 func (p *DiskPlugin) Detach(volumeName string, nodeName string) utils.Result {
 	log.Infof("Disk Plugin Detach: %s", strings.Join(os.Args, ","))
@@ -258,12 +265,12 @@ func (p *DiskPlugin) Detach(volumeName string, nodeName string) utils.Result {
 	return utils.Succeed()
 }
 
-// Not Support
+// Mount Not Support
 func (p *DiskPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	return utils.NotSupport()
 }
 
-// Support, to fix umount bug;
+// Unmount Support, to fix umount bug;
 func (p *DiskPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Disk, Starting to Unmount: %s", mountPoint)
 
@@ -285,7 +292,7 @@ func (p *DiskPlugin) doUnmount(mountPoint string) {
 	}
 }
 
-// Unmount host mount path
+// UnmountMountPoint Unmount host mount path
 func UnmountMountPoint(mountPath string) error {
 	// check mountpath is exist
 	if pathExists, pathErr := utils.PathExists(mountPath); pathErr != nil {
@@ -317,6 +324,7 @@ func UnmountMountPoint(mountPath string) error {
 	}
 	if notMnt {
 		if err := os.Remove(mountPath); err != nil {
+			log.Warningf("Warning: deleting mountPath %s, with error: %s", mountPath, err.Error())
 			return err
 		}
 		return nil
@@ -324,7 +332,7 @@ func UnmountMountPoint(mountPath string) error {
 	return fmt.Errorf("Failed to unmount path")
 }
 
-// Support
+// Getvolumename Support
 func (p *DiskPlugin) Getvolumename(opts interface{}) utils.Result {
 	opt := opts.(*DiskOptions)
 	return utils.Result{
@@ -333,7 +341,7 @@ func (p *DiskPlugin) Getvolumename(opts interface{}) utils.Result {
 	}
 }
 
-// Not Support
+// Waitforattach Not Support
 func (p *DiskPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
 	opt := opts.(*DiskOptions)
 	if devicePath == "" {
@@ -363,7 +371,7 @@ func (p *DiskPlugin) Waitforattach(devicePath string, opts interface{}) utils.Re
 	}
 }
 
-// Not Support
+// Mountdevice Not Support
 func (p *DiskPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
@@ -385,7 +393,7 @@ func (p *DiskPlugin) initEcsClient() {
 	}
 }
 
-// read disk config from local file
+// GetDiskLocalConfig read disk config from local file
 func (p *DiskPlugin) GetDiskLocalConfig() (string, string, string) {
 	accessKeyID, accessSecret, ecsEndpoint := "", "", ""
 
@@ -431,7 +439,7 @@ func getDevicePath(before, after []string) []string {
 }
 
 // endpoint: env variable first; /etc/.volumeak/diskEcsEndpoint second, overseas region third;
-func newEcsClient(access_key_id, access_key_secret, access_token, ecs_endpoint string) *ecs.Client {
+func newEcsClient(accessKeyId, accessKeySecret, accessToken, ecsEndpoint string) *ecs.Client {
 	m := metadata.NewMetaData(nil)
 	region, err := m.Region()
 	if err != nil {
@@ -440,10 +448,10 @@ func newEcsClient(access_key_id, access_key_secret, access_token, ecs_endpoint s
 
 	// use environment endpoint first;
 	if ep := os.Getenv("ECS_ENDPOINT"); ep != "" {
-		ecs_endpoint = ep
+		ecsEndpoint = ep
 	}
 
-	client := ecs.NewECSClientWithEndpointAndSecurityToken(ecs_endpoint, access_key_id, access_key_secret, access_token, common.Region(region))
+	client := ecs.NewECSClientWithEndpointAndSecurityToken(ecsEndpoint, accessKeyId, accessKeySecret, accessToken, common.Region(region))
 	client.SetUserAgent(KUBERNETES_ALICLOUD_IDENTITY)
 
 	return client
@@ -478,10 +486,7 @@ func saveVolumeConfig(opt *DiskOptions) error {
 	}
 
 	volumeFile := path.Join(VolumeDir, opt.VolumeName+".conf")
-	if err := ioutil.WriteFile(volumeFile, []byte(opt.VolumeId), 0644); err != nil {
-		return err
-	}
-	return nil
+	return ioutil.WriteFile(volumeFile, []byte(opt.VolumeId), 0644)
 }
 
 // move config file to remove dir

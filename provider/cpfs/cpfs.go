@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+// CpfsOptions cpfs options
 type CpfsOptions struct {
 	Server     string `json:"server"`
 	FileSystem string `json:"fileSystem"`
@@ -19,22 +20,26 @@ type CpfsOptions struct {
 	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
 }
 
+// const values
 const (
-	CPFS_TEMP_MNTPath = "/mnt/acs_mnt/k8s_cpfs/" // used for create sub directory;
+	CPFSTEMPMNTPath = "/mnt/acs_mnt/k8s_cpfs/" // used for create sub directory;
 )
 
+// CpfsPlugin pligin
 type CpfsPlugin struct {
 }
 
+// NewOptions new options
 func (p *CpfsPlugin) NewOptions() interface{} {
 	return &CpfsOptions{}
 }
 
+// Init plugin init
 func (p *CpfsPlugin) Init() utils.Result {
 	return utils.Succeed()
 }
 
-// cpfs support mount and umount
+// Mount cpfs support mount and umount
 func (p *CpfsPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 
 	log.Infof("Cpfs Plugin Mount: %s", strings.Join(os.Args, ","))
@@ -90,7 +95,7 @@ func (p *CpfsPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 // 3. umount the tmep directory
 func (p *CpfsPlugin) createNasSubDir(opt *CpfsOptions) {
 	// step 1: create mount path
-	rootTempPath := filepath.Join(CPFS_TEMP_MNTPath, opt.VolumeName)
+	rootTempPath := filepath.Join(CPFSTEMPMNTPath, opt.VolumeName)
 	if err := utils.CreateDest(rootTempPath); err != nil {
 		utils.FinishError("Create Nas temp Directory err: " + err.Error())
 	}
@@ -114,6 +119,7 @@ func (p *CpfsPlugin) createNasSubDir(opt *CpfsOptions) {
 	log.Info("Create Sub Directory success: ", opt.FileSystem)
 }
 
+// Unmount umount path
 func (p *CpfsPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Cpfs Plugin Umount: %s", strings.Join(os.Args, ","))
 
@@ -132,25 +138,27 @@ func (p *CpfsPlugin) Unmount(mountPoint string) utils.Result {
 	return utils.Succeed()
 }
 
+// Attach not support
 func (p *CpfsPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
+// Detach not support
 func (p *CpfsPlugin) Detach(device string, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
-// Not Support
+// Getvolumename Not Support
 func (p *CpfsPlugin) Getvolumename(opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
-// Not Support
+// Waitforattach Not Support
 func (p *CpfsPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
-// Not Support
+// Mountdevice Not Support
 func (p *CpfsPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }

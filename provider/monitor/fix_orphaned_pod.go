@@ -19,15 +19,15 @@ import (
 // global_config: false, host_config: true   --- running fix_issue_orphan_pod()
 // global_config: false, host_config: false  --- not running fix_issue_orphan_pod()
 // global_config: false, host_config: no_set --- not running fix_issue_orphan_pod()
-func fix_issue_orphan_pod() {
+func fixIssueOrphanPod() {
 	SLEEP_SECOND := DEFAULT_SLEEP_SECOND
 
 	for {
-		if host_fix_orphaned_pod == "false" {
+		if hostFixOrphanedPod == "false" {
 			time.Sleep(time.Duration(SLEEP_SECOND) * time.Second)
 			continue
 		}
-		if host_fix_orphaned_pod == "no_set" && global_fix_orphaned_pod == false {
+		if hostFixOrphanedPod == "no_set" && globalFixOrphanedPod == false {
 			time.Sleep(time.Duration(SLEEP_SECOND) * time.Second)
 			continue
 		}
@@ -104,7 +104,7 @@ func fix_issue_orphan_pod() {
 	}
 }
 
-// read last 2k Bytes and return lines
+// ReadFileLines read last 2k Bytes and return lines
 func ReadFileLines(fname string) []string {
 	strList := []string{}
 
@@ -152,6 +152,7 @@ func ReadFileLines(fname string) []string {
 	return strings.Split(strLines, "\n")
 }
 
+// IsHostMounted check directory mounted
 func IsHostMounted(mountPath string) bool {
 	cmd := fmt.Sprintf("%s mount | grep \"%s type\" | grep -v grep", NSENTER_CMD, mountPath)
 	out, err := utils.Run(cmd)
@@ -161,6 +162,7 @@ func IsHostMounted(mountPath string) bool {
 	return true
 }
 
+// HostUmount check directory in host mounted
 func HostUmount(mountPath string) bool {
 	cmd := fmt.Sprintf("%s umount %s", NSENTER_CMD, mountPath)
 	_, err := utils.Run(cmd)
@@ -170,6 +172,7 @@ func HostUmount(mountPath string) bool {
 	return true
 }
 
+// IsHostEmpty check host mounted
 func IsHostEmpty(mountPath string) bool {
 	cmd := fmt.Sprintf("%s ls %s", NSENTER_CMD, mountPath)
 	out, err := utils.Run(cmd)
@@ -182,6 +185,7 @@ func IsHostEmpty(mountPath string) bool {
 	return true
 }
 
+// RemoveHostPath remove host path
 func RemoveHostPath(mountPath string) {
 	cmd := fmt.Sprintf("%s mv %s /tmp/", NSENTER_CMD, mountPath)
 	utils.Run(cmd)

@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// OssOptions oss plugin options
 type OssOptions struct {
 	Bucket      string `json:"bucket"`
 	Url         string `json:"url"`
@@ -25,18 +26,22 @@ type OssOptions struct {
 	SecretAkSec string `json:"kubernetes.io/secret/akSecret"`
 }
 
+// const values
 const (
 	CredentialFile = "/etc/passwd-ossfs"
 )
 
+// OssPlugin oss plugin
 type OssPlugin struct {
 	client *ecs.Client
 }
 
+// NewOptions plugin new options
 func (p *OssPlugin) NewOptions() interface{} {
 	return &OssOptions{}
 }
 
+// Init oss plugin init
 func (p *OssPlugin) Init() utils.Result {
 	return utils.Succeed()
 }
@@ -129,9 +134,8 @@ func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 			}
 			log.Infof("Lazy umount Oss path successful: %s", mountPoint)
 			return utils.Succeed()
-		} else {
-			utils.FinishError("Umount OSS Fail: " + err.Error())
 		}
+		utils.FinishError("Umount OSS Fail: " + err.Error())
 	}
 
 	log.Info("Umount Oss path successful: ", mountPoint)
@@ -174,15 +178,17 @@ func checkSubpathVolumes(mountPoint string) {
 	}
 }
 
+// Attach not supported
 func (p *OssPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
+// Detach not support
 func (p *OssPlugin) Detach(device string, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
-// Support
+// Getvolumename Support
 func (p *OssPlugin) Getvolumename(opts interface{}) utils.Result {
 	opt := opts.(*OssOptions)
 	return utils.Result{
@@ -191,12 +197,12 @@ func (p *OssPlugin) Getvolumename(opts interface{}) utils.Result {
 	}
 }
 
-// Not Support
+// Waitforattach Not Support
 func (p *OssPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
-// Not Support
+// Mountdevice Not Support
 func (p *OssPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }

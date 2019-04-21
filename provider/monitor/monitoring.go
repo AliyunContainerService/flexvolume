@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// const values for monitoring
 const (
 	NSENTER_CMD = "/acs/nsenter --mount=/proc/1/ns/mnt "
 	DISK_BIN    = "/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk"
@@ -23,28 +24,28 @@ const (
 )
 
 // configs for orphan pod issue
-var global_fix_orphaned_pod = false
-var host_fix_orphaned_pod = "no_set"
+var globalFixOrphanedPod = false
+var hostFixOrphanedPod = "no_set"
 
-// running for plugin status check
+// Monitoring running for plugin status check
 func Monitoring() {
 	// Parse fix_orphaned pod global env
-	process_fix_issues := strings.ToLower(os.Getenv("FIX_ISSUES"))
+	processFixIssues := strings.ToLower(os.Getenv("FIX_ISSUES"))
 
 	// check global config for issues;
-	fix_issues_list := strings.Split(process_fix_issues, ",")
-	for _, fix_issue := range fix_issues_list {
-		fix_issue = strings.ToLower(fix_issue)
-		if fix_issue == "fix_orphaned_pod" {
-			global_fix_orphaned_pod = true
+	fixIssuesList := strings.Split(processFixIssues, ",")
+	for _, fixIssue := range fixIssuesList {
+		fixIssue = strings.ToLower(fixIssue)
+		if fixIssue == "fix_orphaned_pod" {
+			globalFixOrphanedPod = true
 		}
 	}
 
 	// parse host flexvolume config
-	go parse_flexvolume_host_config()
+	go parseFlexvolumeHostConfig()
 
 	// fix orphan pod with umounted path; github issue: https://github.com/kubernetes/kubernetes/issues/60987
-	go fix_issue_orphan_pod()
+	go fixIssueOrphanPod()
 
 	// monitoring in loop
 	for {
@@ -82,7 +83,7 @@ func Monitoring() {
 }
 
 // parse flexvolume global config
-func parse_flexvolume_host_config() {
+func parseFlexvolumeHostConfig() {
 	for {
 		if utils.IsFileExisting(FLEXVOLUME_CONFIG_FILE) {
 			raw, err := ioutil.ReadFile(FLEXVOLUME_CONFIG_FILE)
@@ -97,20 +98,20 @@ func parse_flexvolume_host_config() {
 
 				// Parse fix_orphaned_pod config
 				if strings.Contains(lowLine, "fix_orphaned_pod:") && strings.Contains(lowLine, "true") {
-					host_fix_orphaned_pod = "true"
+					hostFixOrphanedPod = "true"
 					setFlag = true
 					break
 				} else if strings.Contains(lowLine, "fix_orphaned_pod:") && strings.Contains(lowLine, "false") {
-					host_fix_orphaned_pod = "false"
+					hostFixOrphanedPod = "false"
 					setFlag = true
 					break
 				}
 			}
 			if !setFlag {
-				host_fix_orphaned_pod = "no_set"
+				hostFixOrphanedPod = "no_set"
 			}
 		} else {
-			host_fix_orphaned_pod = "no_set"
+			hostFixOrphanedPod = "no_set"
 		}
 
 		SLEEP_SECOND := DEFAULT_SLEEP_SECOND

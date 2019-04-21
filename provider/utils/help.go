@@ -10,10 +10,12 @@ var (
 	GITCOMMIT = "HEAD"
 )
 
+// PluginVersion
 func PluginVersion() string {
 	return VERSION
 }
 
+// Usage help
 func Usage() {
 	fmt.Printf("In K8s Mode: " +
 		"Use binary file as the first parameter, and format support:\n" +

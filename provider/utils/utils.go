@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// used for global ak
+// DefaultOptions used for global ak
 type DefaultOptions struct {
 	Global struct {
 		KubernetesClusterTag string
@@ -26,6 +26,7 @@ type DefaultOptions struct {
 	}
 }
 
+// const values
 const (
 	encodedCredPath = "/etc/kubernetes/cloud-config.alicloud"
 	credPath        = "/etc/kubernetes/cloud-config"
@@ -36,6 +37,7 @@ const (
 	INSTANCEID_TAG  = "instance-id"
 )
 
+// Succeed successful action
 func Succeed(a ...interface{}) Result {
 	return Result{
 		Status:  "Success",
@@ -43,6 +45,7 @@ func Succeed(a ...interface{}) Result {
 	}
 }
 
+// NotSupport not support action
 func NotSupport(a ...interface{}) Result {
 	return Result{
 		Status:  "Not supported",
@@ -50,6 +53,7 @@ func NotSupport(a ...interface{}) Result {
 	}
 }
 
+// Fail fail the flexvolume call
 func Fail(a ...interface{}) Result {
 	return Result{
 		Status:  "Failure",
@@ -57,6 +61,7 @@ func Fail(a ...interface{}) Result {
 	}
 }
 
+// Finish finish call
 func Finish(result Result) {
 	code := 1
 	if result.Status == "Success" {
@@ -71,12 +76,13 @@ func Finish(result Result) {
 	os.Exit(code)
 }
 
+// FinishError print error info
 func FinishError(message string) {
 	log.Info("Exit with Error: ", message)
 	Finish(Fail(message))
 }
 
-// Result
+// Result of flexvolume
 type Result struct {
 	Status     string `json:"status"`
 	Message    string `json:"message,omitempty"`
@@ -84,7 +90,7 @@ type Result struct {
 	VolumeName string `json:"volumeName"`
 }
 
-// run shell command
+// Run run shell command
 func Run(cmd string) (string, error) {
 	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
 	if err != nil {
@@ -93,6 +99,7 @@ func Run(cmd string) (string, error) {
 	return string(out), nil
 }
 
+// CreateDest create directory
 func CreateDest(dest string) error {
 	fi, err := os.Lstat(dest)
 
@@ -110,6 +117,7 @@ func CreateDest(dest string) error {
 	return nil
 }
 
+// IsMounted check directory is mounted or not.
 func IsMounted(mountPath string) bool {
 	cmd := fmt.Sprintf("mount | grep \"%s type\" | grep -v grep", mountPath)
 	out, err := Run(cmd)
@@ -119,6 +127,7 @@ func IsMounted(mountPath string) bool {
 	return true
 }
 
+// Umount umount path.
 func Umount(mountPath string) bool {
 	cmd := fmt.Sprintf("umount -f %s", mountPath)
 	_, err := Run(cmd)
@@ -128,7 +137,7 @@ func Umount(mountPath string) bool {
 	return true
 }
 
-// check file exist in volume driver;
+// IsFileExisting check file exist in volume driver;
 func IsFileExisting(filename string) bool {
 	_, err := os.Stat(filename)
 	if err == nil {
@@ -140,7 +149,7 @@ func IsFileExisting(filename string) bool {
 	return true
 }
 
-// Get regionid instanceid;
+// GetRegionAndInstanceId Get regionid instanceid;
 func GetRegionAndInstanceId() (string, string, error) {
 	regionId, err := GetMetaData(REGIONID_TAG)
 	if err != nil {
@@ -153,7 +162,7 @@ func GetRegionAndInstanceId() (string, string, error) {
 	return regionId, instanceId, nil
 }
 
-// get metadata
+// GetMetaData get metadata
 func GetMetaData(resource string) (string, error) {
 	resp, err := http.Get(METADATA_URL + resource)
 	if err != nil {
@@ -167,6 +176,7 @@ func GetMetaData(resource string) (string, error) {
 	return string(body), nil
 }
 
+// GetRegionIdAndInstanceId get region id instance id
 func GetRegionIdAndInstanceId(nodeName string) (string, string, error) {
 	strs := strings.SplitN(nodeName, ".", 2)
 	if len(strs) < 2 {
@@ -175,7 +185,7 @@ func GetRegionIdAndInstanceId(nodeName string) (string, string, error) {
 	return strs[0], strs[1], nil
 }
 
-// save json data to file
+// WriteJosnFile save json data to file
 func WriteJosnFile(obj interface{}, file string) error {
 	maps := make(map[string]interface{})
 	t := reflect.TypeOf(obj)
@@ -192,7 +202,7 @@ func WriteJosnFile(obj interface{}, file string) error {
 	return nil
 }
 
-// parse json to struct
+// ReadJsonFile parse json to struct
 func ReadJsonFile(file string) (map[string]string, error) {
 	jsonObj := map[string]string{}
 	raw, err := ioutil.ReadFile(file)
@@ -206,7 +216,7 @@ func ReadJsonFile(file string) (map[string]string, error) {
 	return jsonObj, nil
 }
 
-// read ossfs ak from local or from secret file
+// GetLocalAK read ossfs ak from local or from secret file
 func GetLocalAK() (string, string) {
 	accessKeyID, accessSecret := "", ""
 	//accessKeyID, accessSecret = GetLocalAK()
@@ -232,7 +242,7 @@ func GetLocalAK() (string, string) {
 	return strings.TrimSpace(accessKeyID), strings.TrimSpace(accessSecret)
 }
 
-// read default ak from local file or from STS
+// GetDefaultAK read default ak from local file or from STS
 func GetDefaultAK() (string, string, string) {
 	accessKeyID, accessSecret := GetLocalAK()
 
@@ -245,7 +255,7 @@ func GetDefaultAK() (string, string, string) {
 
 }
 
-// get STS AK
+// GetSTSAK get STS AK
 func GetSTSAK() (string, string, string) {
 	m := metadata.NewMetaData(nil)
 
@@ -263,6 +273,7 @@ func GetSTSAK() (string, string, string) {
 	return role.AccessKeyId, role.AccessKeySecret, role.SecurityToken
 }
 
+// GetLocalSystemAK get local access key
 func GetLocalSystemAK() (string, string) {
 	var accessKeyID, accessSecret string
 	var defaultOpt DefaultOptions
@@ -316,6 +327,7 @@ func PathExists(path string) (bool, error) {
 	}
 }
 
+//IsLikelyNotMountPoint check is mountpoint or not
 func IsLikelyNotMountPoint(file string) (bool, error) {
 	stat, err := os.Stat(file)
 	if err != nil {

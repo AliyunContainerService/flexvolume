@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// NasOptions nas options
 type NasOptions struct {
 	Server     string `json:"server"`
 	Path       string `json:"path"`
@@ -25,25 +26,29 @@ type NasOptions struct {
 	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
 }
 
+// const values
 const (
-	NAS_PORTNUM      = "2049"
-	NAS_TEMP_MNTPath = "/mnt/acs_mnt/k8s_nas/" // used for create sub directory;
-	MODE_CHAR        = "01234567"
+	NASPORTNUM     = "2049"
+	NASTEMPMNTPath = "/mnt/acs_mnt/k8s_nas/" // used for create sub directory;
+	MODECHAR       = "01234567"
 )
 
+// NasPlugin nas plugin
 type NasPlugin struct {
 	client *nas.Client
 }
 
+// NewOptions new options.
 func (p *NasPlugin) NewOptions() interface{} {
 	return &NasOptions{}
 }
 
+// Init plugin init
 func (p *NasPlugin) Init() utils.Result {
 	return utils.Succeed()
 }
 
-// nas support mount and umount
+// Mount nas support mount and umount
 func (p *NasPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 
 	log.Infof("Nas Plugin Mount: %s", strings.Join(os.Args, ","))
@@ -150,6 +155,7 @@ func checkSystemNasConfig() {
 	}
 }
 
+// Unmount umount mnt
 func (p *NasPlugin) Unmount(mountPoint string) utils.Result {
 	log.Infof("Nas Plugin Umount: %s", strings.Join(os.Args, ","))
 
@@ -213,7 +219,7 @@ func (p *NasPlugin) noOtherNasUser(nfsServer, mountPoint string) bool {
 }
 
 func (p *NasPlugin) isNasServerReachable(url string) bool {
-	conn, err := net.DialTimeout("tcp", url+":"+NAS_PORTNUM, time.Second*2)
+	conn, err := net.DialTimeout("tcp", url+":"+NASPORTNUM, time.Second*2)
 	if err != nil {
 		return false
 	}
@@ -221,15 +227,17 @@ func (p *NasPlugin) isNasServerReachable(url string) bool {
 	return true
 }
 
+// Attach not support
 func (p *NasPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
+// Detach not support
 func (p *NasPlugin) Detach(device string, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
-// Support
+// Getvolumename Support
 func (p *NasPlugin) Getvolumename(opts interface{}) utils.Result {
 	opt := opts.(*NasOptions)
 	return utils.Result{
@@ -238,12 +246,12 @@ func (p *NasPlugin) Getvolumename(opts interface{}) utils.Result {
 	}
 }
 
-// Not Support
+// Waitforattach no Support
 func (p *NasPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
-// Not Support
+// Mountdevice Not Support
 func (p *NasPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
@@ -253,7 +261,7 @@ func (p *NasPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result
 // 3. umount the tmep directory
 func (p *NasPlugin) createNasSubDir(opt *NasOptions) {
 	// step 1: create mount path
-	nasTmpPath := filepath.Join(NAS_TEMP_MNTPath, opt.VolumeName)
+	nasTmpPath := filepath.Join(NASTEMPMNTPath, opt.VolumeName)
 	if err := utils.CreateDest(nasTmpPath); err != nil {
 		utils.FinishError("Create Nas temp Directory err: " + err.Error())
 	}
@@ -299,7 +307,7 @@ func (p *NasPlugin) checkOptions(opt *NasOptions) error {
 		return errors.New("NAS url is empty")
 	}
 	// check network connection
-	conn, err := net.DialTimeout("tcp", opt.Server+":"+NAS_PORTNUM, time.Second*time.Duration(3))
+	conn, err := net.DialTimeout("tcp", opt.Server+":"+NASPORTNUM, time.Second*time.Duration(3))
 	if err != nil {
 		log.Errorf("NAS: Cannot connect to nas host: %s", opt.Server)
 		return errors.New("NAS: Cannot connect to nas host: " + opt.Server)
@@ -335,7 +343,7 @@ func (p *NasPlugin) checkOptions(opt *NasOptions) error {
 			return errors.New("NAS: mode input format error: " + opt.Mode)
 		}
 		for i := 0; i < modeLen; i++ {
-			if !strings.Contains(MODE_CHAR, opt.Mode[i:i+1]) {
+			if !strings.Contains(MODECHAR, opt.Mode[i:i+1]) {
 				log.Errorf("NAS: mode is illegal, %s", opt.Mode)
 				return errors.New("NAS: mode is illegal " + opt.Mode)
 			}

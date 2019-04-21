@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// VolumePlugin interface for plugins
+// FluxVolumePlugin: VolumePlugin interface for plugins
 type FluxVolumePlugin interface {
 	NewOptions() interface{} // not called by kubelet
 	Init() utils.Result
@@ -29,6 +29,7 @@ type FluxVolumePlugin interface {
 	Unmount(mountPoint string) utils.Result
 }
 
+// const values
 const (
 	MB_SIZE = 1024 * 1024
 
@@ -40,7 +41,7 @@ const (
 	LOGFILE_PREFIX    = "/var/log/alicloud/flexvolume_"
 )
 
-// run kubernetes command
+// RunK8sAction run kubernetes command
 func RunK8sAction() {
 	if len(os.Args) < 2 {
 		utils.Finish(utils.Fail("Expected at least one parameter"))
@@ -65,7 +66,7 @@ func RunK8sAction() {
 	}
 }
 
-// Runplugin only support attach, detach now
+// RunPlugin only support attach, detach now
 func RunPlugin(plugin FluxVolumePlugin) {
 
 	switch os.Args[1] {

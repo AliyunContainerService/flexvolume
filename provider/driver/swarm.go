@@ -1,6 +1,6 @@
 package driver
 
-// expect to support running on swarm
+// RunningInSwarm expect to support running on swarm
 func RunningInSwarm() {
 
 }
