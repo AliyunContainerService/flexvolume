@@ -182,13 +182,17 @@ func (p *OssPlugin) Detach(device string, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
-// Not Support
+// Support
 func (p *OssPlugin) Getvolumename(opts interface{}) utils.Result {
-	return utils.NotSupport()
+	opt := opts.(*OssOptions)
+	return utils.Result{
+		Status:     "Success",
+		VolumeName: opt.VolumeName,
+	}
 }
 
 // Not Support
-func (p *OssPlugin) Waitforattach(opts interface{}) utils.Result {
+func (p *OssPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 

@@ -324,14 +324,43 @@ func UnmountMountPoint(mountPath string) error {
 	return fmt.Errorf("Failed to unmount path")
 }
 
-// Not Support
+// Support
 func (p *DiskPlugin) Getvolumename(opts interface{}) utils.Result {
-	return utils.NotSupport()
+	opt := opts.(*DiskOptions)
+	return utils.Result{
+		Status:     "Success",
+		VolumeName: opt.VolumeName,
+	}
 }
 
 // Not Support
-func (p *DiskPlugin) Waitforattach(opts interface{}) utils.Result {
-	return utils.NotSupport()
+func (p *DiskPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
+        opt := opts.(*DiskOptions)
+        if devicePath == "" {
+                utils.FinishError("Waitforattach, devicePath is empty, cannot used for Volume: " + opt.VolumeName)
+        }
+        if ! utils.IsFileExisting(devicePath) {
+                utils.FinishError("Waitforattach, devicePath: " + devicePath + " is not exist, cannot used for Volume: " + opt.VolumeName)
+        }
+
+        // check the device is used for system
+        if devicePath == "/dev/vda" || devicePath == "/dev/vda1" {
+                utils.FinishError("Waitforattach, devicePath: " + devicePath + " is system device, cannot used for Volume: " + opt.VolumeName)
+        }
+        if devicePath == "/dev/vdb1" {
+                checkCmd := fmt.Sprintf("mount | grep \"/dev/vdb1 on /var/lib/kubelet type\" | wc -l")
+                if out, err := utils.Run(checkCmd); err != nil {
+                        utils.FinishError("Waitforattach, devicePath: " + devicePath + " is check vdb error for Volume: " + opt.VolumeName)
+                } else if strings.TrimSpace(out) != "0" {
+                        utils.FinishError("Waitforattach, devicePath: " + devicePath + " is used as DataDisk for kubelet,  cannot used fo Volume: " + opt.VolumeName)
+                }
+        }
+
+        log.Infof("Waitforattach, wait for attach: %s, %s", devicePath, opt.VolumeName)
+        return utils.Result{
+                Status: "Success",
+                Device: devicePath,
+        }
 }
 
 // Not Support

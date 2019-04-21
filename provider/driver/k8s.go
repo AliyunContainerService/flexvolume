@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliyunContainerService/flexvolume/provider/cpfs"
+	"github.com/AliyunContainerService/flexvolume/provider/disk"
+	"github.com/AliyunContainerService/flexvolume/provider/monitor"
+	"github.com/AliyunContainerService/flexvolume/provider/nas"
+	"github.com/AliyunContainerService/flexvolume/provider/oss"
+	"github.com/AliyunContainerService/flexvolume/provider/utils"
 	log "github.com/sirupsen/logrus"
-	cpfs "github.com/AliyunContainerService/flexvolume/provider/cpfs"
-	disk "github.com/AliyunContainerService/flexvolume/provider/disk"
-	monitor "github.com/AliyunContainerService/flexvolume/provider/monitor"
-	nas "github.com/AliyunContainerService/flexvolume/provider/nas"
-	oss "github.com/AliyunContainerService/flexvolume/provider/oss"
-	utils "github.com/AliyunContainerService/flexvolume/provider/utils"
 )
 
 // VolumePlugin interface for plugins
@@ -22,7 +22,7 @@ type FluxVolumePlugin interface {
 	Init() utils.Result
 	Getvolumename(opt interface{}) utils.Result
 	Attach(opt interface{}, nodeName string) utils.Result
-	Waitforattach(opt interface{}) utils.Result
+	Waitforattach(devicePath string, opt interface{}) utils.Result
 	Mountdevice(mountPath string, opt interface{}) utils.Result
 	Detach(volumeName string, nodeName string) utils.Result
 	Mount(opt interface{}, mountPath string) utils.Result
@@ -114,6 +114,29 @@ func RunPlugin(plugin FluxVolumePlugin) {
 
 		mountPath := os.Args[2]
 		utils.Finish(plugin.Unmount(mountPath))
+
+	case "waitforattach":
+		if len(os.Args) != 4 {
+			utils.FinishError("waitforattach expected exactly 4 arguments; got: " + strings.Join(os.Args, ","))
+		}
+		opt := plugin.NewOptions()
+		if err := json.Unmarshal([]byte(os.Args[3]), opt); err != nil {
+			utils.FinishError("waitforattach Options illegal; got: " + os.Args[3])
+		}
+
+		devicePath := os.Args[2]
+		utils.Finish(plugin.Waitforattach(devicePath, opt))
+
+	case "getvolumename":
+		if len(os.Args) != 3 {
+			utils.FinishError("getvolumename expected exactly 3 arguments; got: " + strings.Join(os.Args, ","))
+		}
+		opt := plugin.NewOptions()
+		if err := json.Unmarshal([]byte(os.Args[2]), opt); err != nil {
+			utils.FinishError("GetVolumeName Options illegal; got: " + os.Args[3])
+		}
+
+		utils.Finish(plugin.Getvolumename(opt))
 
 	default:
 		utils.Finish(utils.NotSupport(os.Args))

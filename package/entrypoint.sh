@@ -31,6 +31,7 @@ if [ "$lsb_release_exist" = "0" ]; then
         host_os="alios"
     else
         echo "OS is not ubuntu 1604/1404, Centos7"
+        echo "system information: "$os_info
         exit 1
     fi
 
@@ -64,8 +65,6 @@ install_disk() {
         cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk
         chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk
 
-        restart_kubelet="true"
-
     # update status
     else
         oldmd5=`md5sum /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk | awk '{print $1}'`
@@ -77,7 +76,6 @@ install_disk() {
             cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk
             chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~disk/disk
 
-            # restart_kubelet="true"
         fi
     fi
 
@@ -116,8 +114,6 @@ install_nas() {
         cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas
         chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas
 
-        restart_kubelet="true"
-
     # update nas
     else
         oldmd5=`md5sum /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas | awk '{print $1}'`
@@ -128,8 +124,6 @@ install_nas() {
             rm -rf /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas
             cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas
             chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~nas/nas
-
-            # restart_kubelet="true"
         fi
     fi
 
@@ -188,8 +182,6 @@ install_oss() {
         cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
         chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
 
-        restart_kubelet="true"
-
     # update oss
     else
         oldmd5=`md5sum /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss | awk '{print $1}'`
@@ -201,7 +193,6 @@ install_oss() {
             cp /acs/flexvolume /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
             chmod 755 /host/usr/libexec/kubernetes/kubelet-plugins/volume/exec/alicloud~oss/oss
 
-            # restart_kubelet="true"
         fi
     fi
 
@@ -297,10 +288,17 @@ install_cpfs() {
 }
 
 # if kubelet not disable controller, exit
+enableADController="false"
 count=`ps -ef | grep kubelet | grep "enable-controller-attach-detach=false" | grep -v "grep" | wc -l`
 if [ "$count" = "0" ]; then
-  echo "kubelet not running in: enable-controller-attach-detach=false"
-  exit 1
+  configInFile=`/acs/nsenter --mount=/proc/1/ns/mnt cat /var/lib/kubelet/config.yaml | grep enableControllerAttachDetach | grep false | grep -v grep | wc -l`
+  if [ "$configInFile" = "0" ]; then
+    enableADController=true
+  fi
+fi
+
+if [ "$enableADController" = "true" ]; then
+  echo "kubelet not running in: enable-controller-attach-detach=false, mount maybe failed"
 fi
 
 # install plugins

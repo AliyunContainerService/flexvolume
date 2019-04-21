@@ -12,8 +12,8 @@ import (
 	"strings"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/denverdino/aliyungo/metadata"
+	log "github.com/sirupsen/logrus"
 )
 
 // used for global ak
@@ -81,6 +81,7 @@ type Result struct {
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
 	Device  string `json:"device,omitempty"`
+	VolumeName string `json:"volumeName"`
 }
 
 // run shell command

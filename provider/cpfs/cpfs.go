@@ -125,7 +125,7 @@ func (p *CpfsPlugin) Unmount(mountPoint string) utils.Result {
 	umntCmd := fmt.Sprintf("umount %s", mountPoint)
 	if _, err := utils.Run(umntCmd); err != nil {
 		log.Errorf("Cpfs, Umount cpfs Fail: %s, %s", err.Error(), mountPoint)
-		utils.FinishError("Cpfs, Umount nfs Fail: " + err.Error())
+		utils.FinishError("Cpfs, Umount cpfs Fail: " + err.Error())
 	}
 
 	log.Info("Umount Cpfs Successful:", mountPoint)
@@ -146,7 +146,7 @@ func (p *CpfsPlugin) Getvolumename(opts interface{}) utils.Result {
 }
 
 // Not Support
-func (p *CpfsPlugin) Waitforattach(opts interface{}) utils.Result {
+func (p *CpfsPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
