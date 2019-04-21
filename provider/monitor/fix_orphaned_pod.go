@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/AliyunContainerService/flexvolume/provider/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 // issue: https://github.com/kubernetes/kubernetes/issues/60987
@@ -64,7 +64,7 @@ func fix_issue_orphan_pod() {
 				drivers := []string{"alicloud~disk", "alicloud~nas", "alicloud~oss", "kubernetes.io~nfs"}
 				for _, driver := range drivers {
 					volHostPath := "/var/lib/kubelet/pods/" + orphanUid + "/volumes/" + driver
-					volPodPath  := "/host/var/lib/kubelet/pods/" + orphanUid + "/volumes/" + driver
+					volPodPath := "/host/var/lib/kubelet/pods/" + orphanUid + "/volumes/" + driver
 					if !utils.IsFileExisting(volPodPath) {
 						continue
 					}
@@ -92,7 +92,7 @@ func fix_issue_orphan_pod() {
 						}
 					}
 				}
-				SLEEP_SECOND = DEFAULT_SLEEP_SECOND/30
+				SLEEP_SECOND = DEFAULT_SLEEP_SECOND / 30
 			}
 		}
 

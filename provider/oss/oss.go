@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/denverdino/aliyungo/ecs"
 	"github.com/AliyunContainerService/flexvolume/provider/utils"
+	"github.com/denverdino/aliyungo/ecs"
+	log "github.com/sirupsen/logrus"
 )
 
 type OssOptions struct {

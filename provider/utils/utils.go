@@ -78,9 +78,9 @@ func FinishError(message string) {
 
 // Result
 type Result struct {
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
-	Device  string `json:"device,omitempty"`
+	Status     string `json:"status"`
+	Message    string `json:"message,omitempty"`
+	Device     string `json:"device,omitempty"`
 	VolumeName string `json:"volumeName"`
 }
 
