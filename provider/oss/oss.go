@@ -190,6 +190,9 @@ func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 
 	// remove directory
 	err = os.Remove(ossMountPath)
+	if err != nil {
+		utils.FinishError("Oss, remove mount path fail: " + err.Error())
+	}
 
 	log.Info("Umount Oss path successful: ", mountPoint)
 	return utils.Succeed()
