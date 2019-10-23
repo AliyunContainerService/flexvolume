@@ -17,6 +17,7 @@ import (
 // OssOptions oss plugin options
 type OssOptions struct {
 	Bucket      string `json:"bucket"`
+	SubPath     string `json:"subpath"`
 	Url         string `json:"url"`
 	OtherOpts   string `json:"otherOpts"`
 	AkId        string `json:"akId"`
@@ -74,7 +75,7 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 			argStr += tmpStr + ", "
 		}
 	}
-	argStr = argStr + "VolumeName: " + opt.VolumeName + ", AkId: " + opt.AkId + ", Bucket: " + opt.Bucket + ", url: " + opt.Url + ", OtherOpts: " + opt.OtherOpts
+	argStr = argStr + "VolumeName: " + opt.VolumeName + ", AkId: " + opt.AkId + ", Bucket: " + opt.Bucket + ", SubPath: " + opt.SubPath + ", url: " + opt.Url + ", OtherOpts: " + opt.OtherOpts
 	log.Infof("Oss Plugin Mount: %s", argStr)
 
 	if err := p.checkOptions(opt); err != nil {
@@ -95,15 +96,50 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 		utils.FinishError("Oss, Save AK file fail: " + err.Error())
 	}
 
-	// default use allow_other
-	mntCmd := fmt.Sprintf("systemd-run --scope -- ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, mountPath, opt.Url, opt.OtherOpts)
-	systemdCmd := fmt.Sprintf("which systemd-run")
-	if _, err := utils.Run(systemdCmd); err != nil {
-		mntCmd = fmt.Sprintf("ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, mountPath, opt.Url, opt.OtherOpts)
-		log.Infof("Mount oss bucket without systemd-run")
+	// retrive podid
+	podID, err := getPodIDFromMountDir(mountPath)
+	if err != nil {
+		utils.FinishError("Oss, Get PodID error: " + err.Error())
 	}
-	if out, err := utils.Run(mntCmd); err != nil {
-		utils.FinishError("Create OSS volume fail: " + err.Error() + ", out: " + out)
+
+	// oss mount path
+	ossMountPath := fmt.Sprintf("/oss/%s", podID)
+	if err := utils.CreateDest(ossMountPath); err != nil {
+		utils.FinishError("Oss, Create oss Mount Path error: " + err.Error() + ossMountPath)
+	}
+	// default use allow_other
+	if !utils.IsMounted(ossMountPath) {
+		mntCmd := fmt.Sprintf("systemd-run --scope -- ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, ossMountPath, opt.Url, opt.OtherOpts)
+		systemdCmd := fmt.Sprintf("which systemd-run")
+		if _, err := utils.Run(systemdCmd); err != nil {
+			mntCmd = fmt.Sprintf("ossfs %s %s -ourl=%s -o allow_other %s", opt.Bucket, ossMountPath, opt.Url, opt.OtherOpts)
+			log.Infof("Mount oss bucket without systemd-run")
+		}
+		if out, err := utils.Run(mntCmd); err != nil {
+			utils.FinishError("Create OSS volume fail: " + err.Error() + ", out: " + out)
+		}
+	}
+
+	ossSubPath := ""
+	if opt.SubPath == "" {
+		ossSubPath = ossMountPath
+	} else {
+		ossSubPath = fmt.Sprintf("%s/%s", ossMountPath, opt.SubPath)
+		// Create subpath if it does not exist
+		if err := utils.CreateDest(ossSubPath); err != nil {
+			utils.FinishError("Oss Subpath, Create Oss SubPath: " + ossSubPath + " error: " + err.Error())
+		}
+		log.Infof("Create OSS SubPath: "+ossSubPath)
+	}
+
+	// remove mount path instead of symlink
+	err = os.Remove(mountPath)
+	if err != nil {
+		utils.FinishError("Oss Subpath, remove mount path fail: " + err.Error())
+	}
+	// mount subpath on bucket to mount path
+	if err := os.Symlink(ossSubPath, mountPath); err != nil {
+		utils.FinishError("Oss Subpath, create symlink fail: " + err.Error() + " srcPath: " + ossSubPath + " destPath: " + mountPath)
 	}
 
 	log.Info("Mount Oss successful: ", mountPath)
@@ -120,23 +156,40 @@ func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 	// check subpath volume umount if exist.
 	checkSubpathVolumes(mountPoint)
 
-	if !utils.IsMounted(mountPoint) {
+	// remove symlink
+	log.Infof("Unlink %s", mountPoint)
+	if err := os.Remove(mountPoint); err != nil {
+		utils.FinishError("Fail to unlink: " + mountPoint + " with Error: " + err.Error())
+	}
+
+	// retrive podid
+	podID, err := getPodIDFromMountDir(mountPoint)
+	if err != nil {
+		utils.FinishError("Oss SubPath, Get PodID error: " + err.Error())
+	}
+
+	ossMountPath := fmt.Sprintf("/oss/%s", podID)
+
+	if !utils.IsMounted(ossMountPath) {
 		return utils.Succeed()
 	}
 
 	// do umount
-	umntCmd := fmt.Sprintf("fusermount -u %s", mountPoint)
+	umntCmd := fmt.Sprintf("fusermount -u %s", ossMountPath)
 	if _, err := utils.Run(umntCmd); err != nil {
 		if strings.Contains(err.Error(), "Device or resource busy") {
-			lazyUmntCmd := fmt.Sprintf("fusermount -uz %s", mountPoint)
+			lazyUmntCmd := fmt.Sprintf("fusermount -uz %s", ossMountPath)
 			if _, err := utils.Run(lazyUmntCmd); err != nil {
 				utils.FinishError("Lazy Umount OSS Fail: " + err.Error())
 			}
-			log.Infof("Lazy umount Oss path successful: %s", mountPoint)
+			log.Infof("Lazy umount Oss path successful: %s", ossMountPath)
 			return utils.Succeed()
 		}
 		utils.FinishError("Umount OSS Fail: " + err.Error())
 	}
+
+	// remove directory
+	err = os.Remove(ossMountPath)
 
 	log.Info("Umount Oss path successful: ", mountPoint)
 	return utils.Succeed()
@@ -266,4 +319,17 @@ func (p *OssPlugin) checkOptions(opt *OssOptions) error {
 		}
 	}
 	return nil
+}
+
+// getPodIDFromMountDir parses pod information from the mountDir
+func getPodIDFromMountDir(mountDir string) (string, error) {
+	// mountDir is in the form of <rootDir>/pods/<podID>/volumes/<flexvolume driver>/<volume name>
+	filepath.Clean(mountDir)
+	token := strings.Split(mountDir, string(filepath.Separator))
+	// token length should at least size 5
+	length := len(token)
+	if length < 5 {
+		return "", fmt.Errorf("failed to parse mountDir %s for CRD name and podID", mountDir)
+	}
+	return token[length-4], nil
 }
