@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/AliyunContainerService/flexvolume/provider/utils"
@@ -18,6 +19,8 @@ import (
 type OssOptions struct {
 	Bucket      string `json:"bucket"`
 	SubPath     string `json:"subpath"`
+	Uid         string `json:"uid"`
+	Gid         string `json:"gid"`
 	Url         string `json:"url"`
 	OtherOpts   string `json:"otherOpts"`
 	AkId        string `json:"akId"`
@@ -75,7 +78,7 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 			argStr += tmpStr + ", "
 		}
 	}
-	argStr = argStr + "VolumeName: " + opt.VolumeName + ", AkId: " + opt.AkId + ", Bucket: " + opt.Bucket + ", SubPath: " + opt.SubPath + ", url: " + opt.Url + ", OtherOpts: " + opt.OtherOpts
+	argStr = argStr + "VolumeName: " + opt.VolumeName + ", AkId: " + opt.AkId + ", Bucket: " + opt.Bucket + ", SubPath: " + opt.SubPath + ", Uid: " + opt.Uid + ", Gid: " + opt.Gid + ", url: " + opt.Url + ", OtherOpts: " + opt.OtherOpts
 	log.Infof("Oss Plugin Mount: %s", argStr)
 
 	if err := p.checkOptions(opt); err != nil {
@@ -129,7 +132,12 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 		if err := utils.CreateDest(ossSubPath); err != nil {
 			utils.FinishError("Oss Subpath, Create Oss SubPath: " + ossSubPath + " error: " + err.Error())
 		}
-		log.Infof("Create OSS SubPath: "+ossSubPath)
+		log.Infof("Create OSS SubPath: " + ossSubPath)
+		chownCmd := fmt.Sprintf("chown %s:%s %s", opt.Uid, opt.Gid, ossSubPath)
+		if out, err := utils.Run(chownCmd); err != nil {
+			utils.FinishError("Oss Subpath, Chown fail: " + err.Error() + ", out: " + out + ", cmd: " + chownCmd)
+		}
+		log.Infof("Chown with command: " + chownCmd)
 	}
 
 	// remove mount path instead of symlink
@@ -176,6 +184,7 @@ func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 
 	// do umount
 	umntCmd := fmt.Sprintf("fusermount -u %s", ossMountPath)
+	log.Infof("Unmount with command: %s", umntCmd)
 	if _, err := utils.Run(umntCmd); err != nil {
 		if strings.Contains(err.Error(), "Device or resource busy") {
 			lazyUmntCmd := fmt.Sprintf("fusermount -uz %s", ossMountPath)
@@ -319,6 +328,22 @@ func (p *OssPlugin) checkOptions(opt *OssOptions) error {
 	if opt.OtherOpts != "" {
 		if !strings.HasPrefix(opt.OtherOpts, "-o ") {
 			return errors.New("Oss: OtherOpts format error: " + opt.OtherOpts)
+		}
+	}
+
+	if opt.Uid == "" {
+		opt.Uid = "0"
+	} else {
+		if _, err := strconv.Atoi(opt.Uid); err != nil {
+			return errors.New("Oss: uid is not integer: " + opt.Uid)
+		}
+	}
+
+	if opt.Gid == "" {
+		opt.Gid = "0"
+	} else {
+		if _, err := strconv.Atoi(opt.Gid); err != nil {
+			return errors.New("Oss: gid is not integer: " + opt.Gid)
 		}
 	}
 	return nil
