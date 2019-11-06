@@ -100,13 +100,13 @@ func (p *OssPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	}
 
 	// retrive podid
-	podID, err := getPodIDFromMountDir(mountPath)
+	podID, _, err := getPodInfoFromMountDir(mountPath)
 	if err != nil {
-		utils.FinishError("Oss, Get PodID error: " + err.Error())
+		utils.FinishError("Oss, Get Pod Info error: " + err.Error())
 	}
 
 	// oss mount path
-	ossMountPath := fmt.Sprintf("/oss/%s", podID)
+	ossMountPath := fmt.Sprintf("/oss/%s~%s", podID, opt.VolumeName)
 	if err := utils.CreateDest(ossMountPath); err != nil {
 		utils.FinishError("Oss, Create oss Mount Path error: " + err.Error() + ossMountPath)
 	}
@@ -171,12 +171,12 @@ func (p *OssPlugin) Unmount(mountPoint string) utils.Result {
 	}
 
 	// retrive podid
-	podID, err := getPodIDFromMountDir(mountPoint)
+	podID, volumeName, err := getPodInfoFromMountDir(mountPoint)
 	if err != nil {
-		utils.FinishError("Oss SubPath, Get PodID error: " + err.Error())
+		utils.FinishError("Oss SubPath, Get Pod Info error: " + err.Error())
 	}
 
-	ossMountPath := fmt.Sprintf("/oss/%s", podID)
+	ossMountPath := fmt.Sprintf("/oss/%s~%s", podID, volumeName)
 
 	if !utils.IsMounted(ossMountPath) {
 		return utils.Succeed()
@@ -349,15 +349,15 @@ func (p *OssPlugin) checkOptions(opt *OssOptions) error {
 	return nil
 }
 
-// getPodIDFromMountDir parses pod information from the mountDir
-func getPodIDFromMountDir(mountDir string) (string, error) {
+// getPodInfoFromMountDir parses pod information from the mountDir
+func getPodInfoFromMountDir(mountDir string) (string, string, error) {
 	// mountDir is in the form of <rootDir>/pods/<podID>/volumes/<flexvolume driver>/<volume name>
 	filepath.Clean(mountDir)
 	token := strings.Split(mountDir, string(filepath.Separator))
 	// token length should at least size 5
 	length := len(token)
 	if length < 5 {
-		return "", fmt.Errorf("failed to parse mountDir %s for CRD name and podID", mountDir)
+		return "", "", fmt.Errorf("failed to parse mountDir %s for CRD name and pod info", mountDir)
 	}
-	return token[length-4], nil
+	return token[length-4], token[length-1], nil
 }
