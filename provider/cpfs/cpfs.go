@@ -19,7 +19,7 @@ package cpfs
 import (
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
         "github.com/AliyunContainerService/flexvolume/provider/utils"
 	"os"
 	"path"
@@ -48,12 +48,6 @@ func (p *CpfsPlugin) NewOptions() interface{} {
 
 // support volume metric
 func (p *CpfsPlugin) Init() utils.Result {
-	driverCap := utils.DriverCapabilities{
-		SupportsMetrics: true,
-	}
-	if utils.SupportsMetrics("cpfs") {
-		return utils.InitSucceed(&driverCap)
-	}
 	return utils.Succeed()
 }
 
@@ -181,7 +175,7 @@ func (p *CpfsPlugin) Waitforattach(devicePath string, opts interface{}) utils.Re
 }
 
 // Not Support
-func (p *CpfsPlugin) Mountdevice(mountPath string, devicePath string, opts interface{}) utils.Result {
+func (p *CpfsPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
