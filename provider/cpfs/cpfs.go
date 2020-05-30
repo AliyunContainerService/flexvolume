@@ -1,17 +1,32 @@
+/*
+Copyright 2019 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package cpfs
 
 import (
 	"errors"
 	"fmt"
-	"github.com/AliyunContainerService/flexvolume/provider/utils"
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
+        "github.com/AliyunContainerService/flexvolume/provider/utils"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 )
 
-// CpfsOptions cpfs options
 type CpfsOptions struct {
 	Server     string `json:"server"`
 	FileSystem string `json:"fileSystem"`
@@ -20,29 +35,31 @@ type CpfsOptions struct {
 	VolumeName string `json:"kubernetes.io/pvOrVolumeName"`
 }
 
-// const values
 const (
-	CPFSTEMPMNTPath = "/mnt/acs_mnt/k8s_cpfs/" // used for create sub directory;
+	CPFS_TEMP_MNTPath = "/mnt/acs_mnt/k8s_cpfs/"
 )
 
-// CpfsPlugin pligin
 type CpfsPlugin struct {
 }
 
-// NewOptions new options
 func (p *CpfsPlugin) NewOptions() interface{} {
 	return &CpfsOptions{}
 }
 
-// Init plugin init
+// support volume metric
 func (p *CpfsPlugin) Init() utils.Result {
+	driverCap := utils.DriverCapabilities{
+		SupportsMetrics: true,
+	}
+	if utils.SupportsMetrics("cpfs") {
+		return utils.InitSucceed(&driverCap)
+	}
 	return utils.Succeed()
 }
 
-// Mount cpfs support mount and umount
+// cpfs support mount and umount
 func (p *CpfsPlugin) Mount(opts interface{}, mountPath string) utils.Result {
-
-	log.Infof("Cpfs Plugin Mount: %s", strings.Join(os.Args, ","))
+	log.Infof("Cpfs Volume Mount: %s", strings.Join(os.Args, ","))
 
 	opt := opts.(*CpfsOptions)
 	if err := p.checkOptions(opt); err != nil {
@@ -51,7 +68,7 @@ func (p *CpfsPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	}
 
 	if utils.IsMounted(mountPath) {
-		log.Infof("Cpfs, Mount Path Already Mounted, options: %s", mountPath)
+		log.Infof("Cpfs, Mount Path Already Mounted, path: %s", mountPath)
 		return utils.Result{Status: "Success"}
 	}
 
@@ -68,14 +85,10 @@ func (p *CpfsPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 	}
 	_, err := utils.Run(mntCmd)
 	if err != nil {
-		if opt.SubPath != "" && opt.SubPath != "/" {
-			if strings.Contains(err.Error(), "No such file or directory") {
-				p.createNasSubDir(opt)
-				if _, err := utils.Run(mntCmd); err != nil {
-					utils.FinishError("Cpfs, Mount Cpfs sub directory fail: " + err.Error())
-				}
-			} else {
-				utils.FinishError("Nas, Mount Nfs fail with error: " + err.Error())
+		if opt.SubPath != "" && opt.SubPath != "/" && strings.Contains(err.Error(), "No such file or directory") {
+			p.createCpfsSubDir(opt)
+			if _, err := utils.Run(mntCmd); err != nil {
+				utils.FinishError("Cpfs, Mount Cpfs sub directory fail: " + err.Error())
 			}
 		} else {
 			utils.FinishError("Cpfs, Mount cpfs fail: " + err.Error())
@@ -84,20 +97,29 @@ func (p *CpfsPlugin) Mount(opts interface{}, mountPath string) utils.Result {
 
 	// check mount
 	if !utils.IsMounted(mountPath) {
-		utils.FinishError("Check mount fail after mount:" + mountPath)
+		utils.FinishError("Check mount fail after mount:" + mountPath + ", with Command: " + mntCmd)
 	}
-	log.Info("CPFS Mount success on: " + mountPath)
+
+	doCpfsConfig()
+	log.Infof("CPFS Mount success on: " + mountPath + ", with Command: " + mntCmd)
 	return utils.Result{Status: "Success"}
+}
+
+func doCpfsConfig() {
+	configCmd := fmt.Sprintf("lctl set_param osc.*.max_rpcs_in_flight=128;lctl set_param osc.*.max_pages_per_rpc=256;lctl set_param mdc.*.max_rpcs_in_flight=256;lctl set_param mdc.*.max_mod_rpcs_in_flight=128")
+	if _, err := utils.Run(configCmd); err != nil {
+		log.Errorf("Cpfs, doCpfsConfig fail with error: %s", err.Error())
+	}
 }
 
 // 1. mount to /mnt/acs_mnt/k8s_cpfs/temp first
 // 2. run mkdir for sub directory
 // 3. umount the tmep directory
-func (p *CpfsPlugin) createNasSubDir(opt *CpfsOptions) {
+func (p *CpfsPlugin) createCpfsSubDir(opt *CpfsOptions) {
 	// step 1: create mount path
-	rootTempPath := filepath.Join(CPFSTEMPMNTPath, opt.VolumeName)
+	rootTempPath := filepath.Join(CPFS_TEMP_MNTPath, opt.VolumeName)
 	if err := utils.CreateDest(rootTempPath); err != nil {
-		utils.FinishError("Create Nas temp Directory err: " + err.Error())
+		utils.FinishError("Create Cpfs temp Directory err: " + err.Error())
 	}
 	if utils.IsMounted(rootTempPath) {
 		utils.Umount(rootTempPath)
@@ -107,59 +129,59 @@ func (p *CpfsPlugin) createNasSubDir(opt *CpfsOptions) {
 	mntCmd := fmt.Sprintf("mount -t lustre %s:/%s %s", opt.Server, opt.FileSystem, rootTempPath)
 	_, err := utils.Run(mntCmd)
 	if err != nil {
-		utils.FinishError("Nas, Mount to temp directory fail: " + err.Error())
+		utils.FinishError("CreateCpfsSubDir, Mount to temp directory fail: " + err.Error())
 	}
 	subPath := path.Join(rootTempPath, opt.SubPath)
 	if err := utils.CreateDest(subPath); err != nil {
-		utils.FinishError("Nas, Create Sub Directory err: " + err.Error())
+		utils.FinishError("CreateCpfsSubDir, Create Sub Directory err: " + err.Error())
 	}
 
 	// step 3: umount after create
 	utils.Umount(rootTempPath)
-	log.Info("Create Sub Directory success: ", opt.FileSystem)
+	log.Infof("Create Sub Directory success for volume: %s, subpath: %s", opt.VolumeName, filepath.Join(opt.FileSystem, opt.SubPath))
 }
 
-// Unmount umount path
 func (p *CpfsPlugin) Unmount(mountPoint string) utils.Result {
-	log.Infof("Cpfs Plugin Umount: %s", strings.Join(os.Args, ","))
+	log.Infof("Cpfs Volume Umount: %s", strings.Join(os.Args, ","))
 
 	if !utils.IsMounted(mountPoint) {
-		log.Info("Cpfs Not mounted, not need Umount:", mountPoint)
+		log.Infof("Path not mounted, skipped: %s", mountPoint)
 		return utils.Succeed()
 	}
 
 	umntCmd := fmt.Sprintf("umount %s", mountPoint)
 	if _, err := utils.Run(umntCmd); err != nil {
-		log.Errorf("Cpfs, Umount cpfs Fail: %s, %s", err.Error(), mountPoint)
-		utils.FinishError("Cpfs, Umount cpfs Fail: " + err.Error())
+		utils.FinishError("Cpfs, Umount Cpfs Fail: " + err.Error())
 	}
 
-	log.Info("Umount Cpfs Successful:", mountPoint)
+	log.Infof("Umount Cpfs Successful: %s, with command: %s", mountPoint, umntCmd)
 	return utils.Succeed()
 }
 
-// Attach not support
 func (p *CpfsPlugin) Attach(opts interface{}, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
-// Detach not support
 func (p *CpfsPlugin) Detach(device string, nodeName string) utils.Result {
 	return utils.NotSupport()
 }
 
-// Getvolumename Not Support
+// Support
 func (p *CpfsPlugin) Getvolumename(opts interface{}) utils.Result {
-	return utils.NotSupport()
+	opt := opts.(*CpfsOptions)
+	return utils.Result{
+		Status:     "Success",
+		VolumeName: opt.VolumeName,
+	}
 }
 
-// Waitforattach Not Support
+// Not Support
 func (p *CpfsPlugin) Waitforattach(devicePath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
-// Mountdevice Not Support
-func (p *CpfsPlugin) Mountdevice(mountPath string, opts interface{}) utils.Result {
+// Not Support
+func (p *CpfsPlugin) Mountdevice(mountPath string, devicePath string, opts interface{}) utils.Result {
 	return utils.NotSupport()
 }
 
@@ -170,13 +192,6 @@ func (p *CpfsPlugin) checkOptions(opt *CpfsOptions) error {
 		return errors.New("CPFS: server is empty")
 	}
 
-	//conn, err := net.DialTimeout("tcp", opt.Server+":"+CPFS_PORTNUM, time.Second*time.Duration(3))
-	//if err != nil {
-	//	log.Errorf("CPFS: Cannot connect to cpfs host: %s", opt.Server)
-	//	return errors.New("CPFS: Cannot connect to cpfs host: " + opt.Server)
-	//}
-	//defer conn.Close()
-
 	// Cpfs fileSystem
 	if opt.FileSystem == "" {
 		return errors.New("CPFS: FileSystem is empty")
@@ -186,7 +201,21 @@ func (p *CpfsPlugin) checkOptions(opt *CpfsOptions) error {
 	if opt.SubPath != "" && !strings.HasPrefix(opt.SubPath, "/") {
 		opt.SubPath = "/" + opt.SubPath
 	}
+	if opt.SubPath == "" {
+		opt.SubPath = "/"
+	}
 
 	opt.Options = strings.TrimSpace(opt.Options)
 	return nil
+}
+
+// Not Support
+func (p *CpfsPlugin) ExpandVolume(opt interface{}, devicePath, newSize, oldSize string) utils.Result {
+	return utils.NotSupport()
+}
+
+
+// Not Support
+func (p *CpfsPlugin) ExpandFS(opt interface{}, devicePath, deviceMountPath, newSize, oldSize string) utils.Result {
+	return utils.NotSupport()
 }
